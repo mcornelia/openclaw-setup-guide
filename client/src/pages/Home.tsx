@@ -5,7 +5,7 @@
  * Fonts: Fraunces (headings), Source Sans 3 (body), JetBrains Mono (code)
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen, Wifi, Server, Download, LayoutDashboard,
@@ -52,6 +52,24 @@ export default function Home() {
   const currentStep = STEPS.find((s) => s.id === currentStepId) ?? STEPS[0];
   const currentPart = PARTS.find((p) => p.id === currentStep.part);
   const progressPct = Math.round((completedSteps.size / TOTAL_STEPS) * 100);
+
+  // Live time-remaining calculation
+  const minutesRemaining = useMemo(() => {
+    return STEPS
+      .filter((s) => !completedSteps.has(s.id))
+      .reduce((sum, s) => sum + (s.estimatedMinutes ?? 0), 0);
+  }, [completedSteps]);
+
+  const formatTimeRemaining = (mins: number) => {
+    if (mins === 0) return null; // all done
+    if (mins < 60) return { value: String(mins), unit: `min${mins !== 1 ? "s" : ""}` };
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (m === 0) return { value: String(h), unit: `hr${h !== 1 ? "s" : ""}` };
+    return { value: `${h}h ${m}`, unit: "min" };
+  };
+
+  const timeDisplay = formatTimeRemaining(minutesRemaining);
 
   useEffect(() => {
     localStorage.setItem("openclaw-current-step", String(currentStepId));
@@ -190,9 +208,28 @@ export default function Home() {
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
-              <p className="text-xs text-[oklch(0.52_0.03_250)] mt-2 font-['Source_Sans_3',sans-serif]">
-                {completedSteps.size} of {TOTAL_STEPS} steps complete
-              </p>
+              {/* Steps complete + time remaining */}
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-xs text-[oklch(0.52_0.03_250)] font-['Source_Sans_3',sans-serif]">
+                  {completedSteps.size} of {TOTAL_STEPS} steps done
+                </p>
+                {timeDisplay ? (
+                  <div className="flex items-center gap-1 text-[oklch(0.74_0.19_60)]">
+                    <Clock size={10} />
+                    <span className="text-xs font-semibold font-['Source_Sans_3',sans-serif] tabular-nums">
+                      {timeDisplay.value}
+                    </span>
+                    <span className="text-[10px] text-[oklch(0.52_0.03_250)] font-['Source_Sans_3',sans-serif]">
+                      {timeDisplay.unit} left
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-[oklch(0.60_0.16_162)]">
+                    <Check size={10} strokeWidth={3} />
+                    <span className="text-xs font-semibold font-['Source_Sans_3',sans-serif]">All done!</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Step list */}
