@@ -19,6 +19,7 @@ import { PARTS, STEPS, TOTAL_STEPS, type Part, type Step } from "@/lib/guideData
 import StepContentRenderer from "@/components/StepContent";
 import Troubleshooting from "./Troubleshooting";
 import CommonIssuesPanel from "@/components/CommonIssuesPanel";
+import TopProgressBar from "@/components/TopProgressBar";
 
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   BookOpen, Wifi, Server, Download, LayoutDashboard,
@@ -134,20 +135,11 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Center: progress bar */}
-          <div className="flex-1 max-w-xs mx-4 hidden sm:block">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-1.5 bg-[oklch(0.88_0.01_250)] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[oklch(0.53_0.15_162)] rounded-full progress-fill"
-                  style={{ width: `${progressPct}%` }}
-                />
-              </div>
-              <span className="text-xs text-[oklch(0.52_0.03_250)] font-['Source_Sans_3',sans-serif] whitespace-nowrap">
-                {completedSteps.size}/{TOTAL_STEPS}
-              </span>
-            </div>
-          </div>
+          {/* Center: rich segmented progress bar */}
+          <TopProgressBar
+            completedSteps={completedSteps}
+            onNavigateToPart={(firstStepId) => navigateTo(firstStepId)}
+          />
 
           {/* Right: troubleshooting button + current part badge */}
           <div className="flex items-center gap-3">
