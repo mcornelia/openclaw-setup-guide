@@ -21,6 +21,7 @@ import StepContentRenderer from "@/components/StepContent";
 import Troubleshooting from "./Troubleshooting";
 import CommonIssuesPanel from "@/components/CommonIssuesPanel";
 import TopProgressBar from "@/components/TopProgressBar";
+import StepTroubleshootingHelper from "@/components/StepTroubleshootingHelper";
 
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   BookOpen, Wifi, Server, Download, LayoutDashboard,
@@ -407,6 +408,7 @@ export default function Home() {
                   nextStep={nextStep}
                   onNavigate={navigateTo}
                   currentPart={currentPart}
+                  onOpenTroubleshooting={openTroubleshooting}
                 />
               </motion.div>
             )}
@@ -601,6 +603,7 @@ function StepView({
   nextStep,
   onNavigate,
   currentPart,
+  onOpenTroubleshooting,
 }: {
   step: Step;
   isCompleted: boolean;
@@ -609,6 +612,7 @@ function StepView({
   nextStep?: Step;
   onNavigate: (id: number) => void;
   currentPart?: Part;
+  onOpenTroubleshooting: () => void;
 }) {
   return (
     <div>
@@ -666,6 +670,12 @@ function StepView({
       <div className="step-content">
         <StepContentRenderer content={step.content} stepId={step.id} />
       </div>
+
+      {/* Contextual troubleshooting helper */}
+      <StepTroubleshootingHelper
+        stepId={step.id}
+        onOpenTroubleshooting={onOpenTroubleshooting}
+      />
 
       {/* Action buttons */}
       <div className="mt-10 pt-6 border-t border-border">
