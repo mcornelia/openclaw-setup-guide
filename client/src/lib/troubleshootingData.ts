@@ -837,3 +837,14 @@ cd openclaw`,
 
 export const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as TroubleshootingCategory[];
 export const ALL_SEVERITIES = Object.keys(SEVERITY_LABELS) as Severity[];
+
+// Top 3 most frequently encountered issues — shown on the main page quick-access panel
+export const TOP_ISSUE_IDS = [
+  "docker-permission-denied",      // #1 — Linux users hit this almost universally
+  "docker-container-exits-immediately", // #2 — Bad API key / missing config on first run
+  "network-cannot-reach-dashboard",    // #3 — Accessing dashboard from another device
+] as const;
+
+export const TOP_ISSUES = TOP_ISSUE_IDS.map(
+  (id) => TROUBLESHOOTING_ENTRIES.find((e) => e.id === id)!
+);

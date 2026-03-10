@@ -18,6 +18,7 @@ import {
 import { PARTS, STEPS, TOTAL_STEPS, type Part, type Step } from "@/lib/guideData";
 import StepContentRenderer from "@/components/StepContent";
 import Troubleshooting from "./Troubleshooting";
+import CommonIssuesPanel from "@/components/CommonIssuesPanel";
 
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   BookOpen, Wifi, Server, Download, LayoutDashboard,
@@ -532,6 +533,9 @@ function HeroSection({
             );
           })}
         </div>
+
+        {/* Common Issues quick-access panel */}
+        <CommonIssuesPanel onOpenTroubleshooting={onTroubleshooting} />
       </div>
     </div>
   );
