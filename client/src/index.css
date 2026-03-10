@@ -107,6 +107,38 @@
   --sidebar-ring: oklch(0.60 0.16 162);
 }
 
+/* ── Dark mode overrides ──────────────────────────────────────────────── */
+.dark {
+  --background: oklch(0.13 0.035 250);
+  --foreground: oklch(0.90 0.008 250);
+  --card: oklch(0.17 0.038 250);
+  --card-foreground: oklch(0.90 0.008 250);
+  --popover: oklch(0.17 0.038 250);
+  --popover-foreground: oklch(0.90 0.008 250);
+  --primary: oklch(0.55 0.16 250);
+  --primary-foreground: oklch(0.98 0.003 250);
+  --secondary: oklch(0.22 0.04 250);
+  --secondary-foreground: oklch(0.80 0.01 250);
+  --muted: oklch(0.22 0.04 250);
+  --muted-foreground: oklch(0.60 0.03 250);
+  --accent: oklch(0.22 0.04 250);
+  --accent-foreground: oklch(0.90 0.008 250);
+  --destructive: oklch(0.65 0.22 27);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.28 0.04 250);
+  --input: oklch(0.28 0.04 250);
+  --ring: oklch(0.55 0.16 250);
+  /* Sidebar stays dark in both modes — slightly lighter in dark mode */
+  --sidebar: oklch(0.11 0.03 250);
+  --sidebar-foreground: oklch(0.88 0.01 250);
+  --sidebar-primary: oklch(0.60 0.16 162);
+  --sidebar-primary-foreground: oklch(0.98 0.003 250);
+  --sidebar-accent: oklch(0.20 0.04 250);
+  --sidebar-accent-foreground: oklch(0.88 0.01 250);
+  --sidebar-border: oklch(0.25 0.04 250);
+  --sidebar-ring: oklch(0.60 0.16 162);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -187,17 +219,29 @@
     border-left: 4px solid oklch(0.66 0.18 60);
     border-radius: 0 0.5rem 0.5rem 0;
   }
+  .dark .callout-warning {
+    background: oklch(0.22 0.06 60);
+    border-left-color: oklch(0.74 0.19 60);
+  }
 
   .callout-info {
     background: oklch(0.96 0.01 250);
     border-left: 4px solid oklch(0.32 0.12 250);
     border-radius: 0 0.5rem 0.5rem 0;
   }
+  .dark .callout-info {
+    background: oklch(0.20 0.05 250);
+    border-left-color: oklch(0.55 0.16 250);
+  }
 
   .callout-success {
     background: oklch(0.98 0.02 162);
     border-left: 4px solid oklch(0.53 0.15 162);
     border-radius: 0 0.5rem 0.5rem 0;
+  }
+  .dark .callout-success {
+    background: oklch(0.18 0.05 162);
+    border-left-color: oklch(0.60 0.16 162);
   }
 
   /* Step indicator */
@@ -230,6 +274,11 @@
     background: oklch(0.95 0.005 250);
     color: oklch(0.52 0.03 250);
     border: 2px solid oklch(0.88 0.01 250);
+  }
+  .dark .step-indicator.pending {
+    background: oklch(0.22 0.04 250);
+    color: oklch(0.60 0.03 250);
+    border-color: oklch(0.32 0.04 250);
   }
 
   /* Progress bar */
@@ -271,11 +320,18 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
+  .dark .guide-table th {
+    background: oklch(0.11 0.03 250);
+  }
 
   .guide-table td {
     padding: 0.75rem 1rem;
     border-bottom: 1px solid oklch(0.88 0.01 250);
     vertical-align: top;
+  }
+  .dark .guide-table td {
+    border-bottom-color: oklch(0.28 0.04 250);
+    color: oklch(0.85 0.008 250);
   }
 
   .guide-table tr:last-child td {
@@ -284,5 +340,8 @@
 
   .guide-table tr:hover td {
     background: oklch(0.97 0.003 250);
+  }
+  .dark .guide-table tr:hover td {
+    background: oklch(0.20 0.04 250);
   }
 }

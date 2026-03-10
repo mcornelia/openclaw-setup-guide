@@ -13,8 +13,9 @@ import {
   ChevronLeft, Clock, Menu, X, Check, Lock, Network,
   ShieldOff, Plug, Package, GitBranch, Key, Play,
   Wand2, Rocket, Monitor, Bot, Link, RefreshCw,
-  Shield, UserCheck, Box, AlertTriangle, Wrench
+  Shield, UserCheck, Box, AlertTriangle, Wrench, Sun, Moon
 } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { PARTS, STEPS, TOTAL_STEPS, type Part, type Step } from "@/lib/guideData";
 import StepContentRenderer from "@/components/StepContent";
 import Troubleshooting from "./Troubleshooting";
@@ -109,15 +110,18 @@ export default function Home() {
   const prevStep = STEPS[STEPS.findIndex((s) => s.id === currentStepId) - 1];
   const nextStep = STEPS[STEPS.findIndex((s) => s.id === currentStepId) + 1];
 
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
+
   return (
-    <div className="min-h-screen bg-[oklch(0.98_0.003_250)] flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col transition-colors duration-300">
       {/* ── Top Bar ─────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-white border-b border-[oklch(0.88_0.01_250)] shadow-sm">
+      <header className="sticky top-0 z-40 bg-card border-b border-border shadow-sm transition-colors duration-300">
         <div className="flex items-center justify-between px-4 lg:px-8 h-14">
           {/* Left: logo + title */}
           <div className="flex items-center gap-3">
             <button
-              className="lg:hidden p-1.5 rounded-md hover:bg-[oklch(0.95_0.005_250)] transition-colors"
+              className="lg:hidden p-1.5 rounded-md hover:bg-muted transition-colors"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
               {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
@@ -129,7 +133,7 @@ export default function Home() {
               <div className="w-7 h-7 rounded-md bg-[oklch(0.32_0.12_250)] flex items-center justify-center">
                 <Shield size={14} className="text-white" />
               </div>
-              <span className="font-['Fraunces',serif] font-700 text-[oklch(0.18_0.04_250)] text-sm hidden sm:block">
+              <span className="font-['Fraunces',serif] font-700 text-foreground text-sm hidden sm:block">
                 OpenClaw Setup Guide
               </span>
             </button>
@@ -141,23 +145,40 @@ export default function Home() {
             onNavigateToPart={(firstStepId) => navigateTo(firstStepId)}
           />
 
-          {/* Right: troubleshooting button + current part badge */}
-          <div className="flex items-center gap-3">
+          {/* Right: dark mode toggle + troubleshooting button + current part badge */}
+          <div className="flex items-center gap-2">
+            {/* Dark mode toggle */}
+            <button
+              onClick={toggleTheme}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200"
+              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              <motion.div
+                key={isDark ? "moon" : "sun"}
+                initial={{ rotate: -30, opacity: 0, scale: 0.7 }}
+                animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+              >
+                {isDark ? <Sun size={15} /> : <Moon size={15} />}
+              </motion.div>
+            </button>
+
             <button
               onClick={openTroubleshooting}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold font-['Source_Sans_3',sans-serif] transition-all ${
                 showTroubleshooting
-                  ? "bg-[oklch(0.32_0.12_250)] text-white border-[oklch(0.32_0.12_250)]"
-                  : "border-[oklch(0.88_0.01_250)] text-[oklch(0.52_0.03_250)] hover:border-[oklch(0.32_0.12_250)] hover:text-[oklch(0.32_0.12_250)]"
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border text-muted-foreground hover:border-primary hover:text-primary"
               }`}
             >
               <Wrench size={13} />
               <span className="hidden sm:block">Troubleshooting</span>
             </button>
             {currentPart && !showHero && !showTroubleshooting && (
-              <div className="flex items-center gap-1.5 text-xs text-[oklch(0.52_0.03_250)] font-['Source_Sans_3',sans-serif]">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-['Source_Sans_3',sans-serif]">
                 <span className="hidden md:block">Part {currentPart.id}:</span>
-                <span className="font-semibold text-[oklch(0.32_0.12_250)] hidden md:block">
+                <span className="font-semibold text-primary hidden md:block">
                   {currentPart.shortTitle}
                 </span>
               </div>
@@ -330,7 +351,7 @@ export default function Home() {
         {/* ── Main Content ──────────────────────────────────────────────────── */}
         <main
           ref={contentRef}
-          className="flex-1 overflow-y-auto"
+          className="flex-1 overflow-y-auto bg-background transition-colors duration-300"
         >
           <AnimatePresence mode="wait">
             {showTroubleshooting ? (
@@ -443,29 +464,29 @@ function HeroSection({
       </div>
 
       {/* Stats bar */}
-      <div className="bg-white border-b border-[oklch(0.88_0.01_250)] px-6 sm:px-12 py-4">
+      <div className="bg-card border-b border-border px-6 sm:px-12 py-4 transition-colors duration-300">
         <div className="flex flex-wrap items-center gap-6 max-w-4xl">
           <div className="flex items-center gap-2">
-            <Clock size={16} className="text-[oklch(0.52_0.03_250)]" />
-            <span className="text-sm text-[oklch(0.52_0.03_250)] font-['Source_Sans_3',sans-serif]">
+            <Clock size={16} className="text-muted-foreground" />
+            <span className="text-sm text-muted-foreground font-['Source_Sans_3',sans-serif]">
               ~90 minutes total
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <CheckSquare size={16} className="text-[oklch(0.52_0.03_250)]" />
-            <span className="text-sm text-[oklch(0.52_0.03_250)] font-['Source_Sans_3',sans-serif]">
+            <CheckSquare size={16} className="text-muted-foreground" />
+            <span className="text-sm text-muted-foreground font-['Source_Sans_3',sans-serif]">
               {totalSteps} steps across 8 parts
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Shield size={16} className="text-[oklch(0.52_0.03_250)]" />
-            <span className="text-sm text-[oklch(0.52_0.03_250)] font-['Source_Sans_3',sans-serif]">
+            <Shield size={16} className="text-muted-foreground" />
+            <span className="text-sm text-muted-foreground font-['Source_Sans_3',sans-serif]">
               Beginner-friendly
             </span>
           </div>
           {completedSteps > 0 && (
             <div className="flex items-center gap-2 ml-auto">
-              <div className="w-24 h-1.5 bg-[oklch(0.88_0.01_250)] rounded-full overflow-hidden">
+              <div className="w-24 h-1.5 bg-border rounded-full overflow-hidden">
                 <div
                   className="h-full bg-[oklch(0.53_0.15_162)] rounded-full progress-fill"
                   style={{ width: `${progressPct}%` }}
@@ -485,7 +506,7 @@ function HeroSection({
         <div className="flex flex-wrap gap-3 mb-12">
           <button
             onClick={onStart}
-            className="flex items-center gap-2 px-6 py-3 bg-[oklch(0.32_0.12_250)] text-white rounded-lg font-semibold font-['Source_Sans_3',sans-serif] hover:bg-[oklch(0.28_0.12_250)] transition-colors shadow-md"
+            className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold font-['Source_Sans_3',sans-serif] hover:opacity-90 transition-all shadow-md"
           >
             {completedSteps > 0 ? "Continue Setup" : "Start Setup"}
             <ChevronRight size={18} />
@@ -493,7 +514,7 @@ function HeroSection({
           {completedSteps > 0 && (
             <button
               onClick={() => onNavigate(1)}
-              className="flex items-center gap-2 px-6 py-3 bg-white text-[oklch(0.32_0.12_250)] border border-[oklch(0.32_0.12_250)] rounded-lg font-semibold font-['Source_Sans_3',sans-serif] hover:bg-[oklch(0.95_0.005_250)] transition-colors"
+              className="flex items-center gap-2 px-6 py-3 bg-card text-primary border border-primary rounded-lg font-semibold font-['Source_Sans_3',sans-serif] hover:bg-muted transition-colors"
             >
               Start from beginning
             </button>
@@ -501,7 +522,7 @@ function HeroSection({
         </div>
 
         {/* Parts overview grid */}
-        <h2 className="font-['Fraunces',serif] font-700 text-2xl text-[oklch(0.18_0.04_250)] mb-6">
+        <h2 className="font-['Fraunces',serif] font-700 text-2xl text-foreground mb-6">
           What You'll Cover
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -517,14 +538,14 @@ function HeroSection({
                 onClick={() => onNavigate(firstStep.id)}
                 className={`text-left p-5 rounded-xl border transition-all duration-200 hover:shadow-md group ${
                   allDone
-                    ? "border-emerald-200 bg-emerald-50 hover:border-emerald-300"
-                    : "border-[oklch(0.88_0.01_250)] bg-white hover:border-[oklch(0.64_0.03_250)]"
+                    ? "border-[oklch(0.60_0.16_162)/40%] bg-[oklch(0.60_0.16_162)/8%] hover:border-[oklch(0.60_0.16_162)/60%]"
+                    : "border-border bg-card hover:border-muted-foreground"
                 }`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div
                     className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                      allDone ? "bg-emerald-500" : "bg-[oklch(0.32_0.12_250)]"
+                      allDone ? "bg-[oklch(0.53_0.15_162)]" : "bg-primary"
                     }`}
                   >
                     {allDone ? (
@@ -535,25 +556,25 @@ function HeroSection({
                   </div>
                   <span
                     className={`text-xs font-semibold font-['Source_Sans_3',sans-serif] ${
-                      allDone ? "text-emerald-600" : "text-[oklch(0.52_0.03_250)]"
+                      allDone ? "text-[oklch(0.53_0.15_162)]" : "text-muted-foreground"
                     }`}
                   >
                     {doneCount}/{partSteps.length} steps
                   </span>
                 </div>
-                <p className="text-xs text-[oklch(0.52_0.03_250)] font-['Source_Sans_3',sans-serif] uppercase tracking-wider mb-1">
+                <p className="text-xs text-muted-foreground font-['Source_Sans_3',sans-serif] uppercase tracking-wider mb-1">
                   Part {part.id}
                 </p>
-                <h3 className="font-['Fraunces',serif] font-600 text-base text-[oklch(0.18_0.04_250)] mb-2 group-hover:text-[oklch(0.32_0.12_250)] transition-colors">
+                <h3 className="font-['Fraunces',serif] font-600 text-base text-foreground mb-2 group-hover:text-primary transition-colors">
                   {part.title}
                 </h3>
-                <p className="text-xs text-[oklch(0.52_0.03_250)] font-['Source_Sans_3',sans-serif] leading-relaxed">
+                <p className="text-xs text-muted-foreground font-['Source_Sans_3',sans-serif] leading-relaxed">
                   {part.description}
                 </p>
                 {doneCount > 0 && doneCount < partSteps.length && (
-                  <div className="mt-3 h-1 bg-[oklch(0.88_0.01_250)] rounded-full overflow-hidden">
+                  <div className="mt-3 h-1 bg-border rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-[oklch(0.32_0.12_250)] rounded-full"
+                      className="h-full bg-primary rounded-full"
                       style={{ width: `${(doneCount / partSteps.length) * 100}%` }}
                     />
                   </div>
@@ -592,10 +613,10 @@ function StepView({
   return (
     <div>
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-xs text-[oklch(0.52_0.03_250)] font-['Source_Sans_3',sans-serif] mb-6">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground font-['Source_Sans_3',sans-serif] mb-6">
         <span>Part {step.part}</span>
         <ChevronRight size={12} />
-        <span className="text-[oklch(0.32_0.12_250)] font-semibold">{currentPart?.shortTitle}</span>
+        <span className="text-primary font-semibold">{currentPart?.shortTitle}</span>
       </div>
 
       {/* Step header */}
@@ -614,10 +635,10 @@ function StepView({
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="font-['Fraunces',serif] font-700 text-2xl sm:text-3xl text-[oklch(0.18_0.04_250)] leading-tight mb-2">
+            <h1 className="font-['Fraunces',serif] font-700 text-2xl sm:text-3xl text-foreground leading-tight mb-2">
               {step.title}
             </h1>
-            <div className="flex items-center gap-3 text-xs text-[oklch(0.52_0.03_250)] font-['Source_Sans_3',sans-serif]">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground font-['Source_Sans_3',sans-serif]">
               <span className="flex items-center gap-1">
                 <Clock size={12} />
                 ~{step.estimatedMinutes} minutes
@@ -638,7 +659,7 @@ function StepView({
         </div>
 
         {/* Divider */}
-        <div className="h-px bg-[oklch(0.88_0.01_250)]" />
+        <div className="h-px bg-border" />
       </div>
 
       {/* Step content */}
@@ -647,20 +668,20 @@ function StepView({
       </div>
 
       {/* Action buttons */}
-      <div className="mt-10 pt-6 border-t border-[oklch(0.88_0.01_250)]">
+      <div className="mt-10 pt-6 border-t border-border">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           {/* Mark complete */}
           {!isCompleted ? (
             <button
               onClick={onMarkComplete}
-              className="flex items-center gap-2 px-6 py-3 bg-[oklch(0.32_0.12_250)] text-white rounded-lg font-semibold font-['Source_Sans_3',sans-serif] hover:bg-[oklch(0.28_0.12_250)] transition-all shadow-md hover:shadow-lg"
+              className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold font-['Source_Sans_3',sans-serif] hover:opacity-90 transition-all shadow-md hover:shadow-lg"
             >
               <Check size={18} />
               Mark Step Complete
               {nextStep && <ChevronRight size={16} />}
             </button>
           ) : (
-            <div className="flex items-center gap-2 px-6 py-3 bg-[oklch(0.98_0.02_162)] text-[oklch(0.53_0.15_162)] rounded-lg border border-[oklch(0.53_0.15_162)/30%] font-semibold font-['Source_Sans_3',sans-serif]">
+            <div className="flex items-center gap-2 px-6 py-3 bg-[oklch(0.60_0.16_162)/10%] text-[oklch(0.53_0.15_162)] rounded-lg border border-[oklch(0.53_0.15_162)/30%] font-semibold font-['Source_Sans_3',sans-serif]">
               <Check size={18} />
               Step Completed
             </div>
@@ -671,7 +692,7 @@ function StepView({
             {prevStep && (
               <button
                 onClick={() => onNavigate(prevStep.id)}
-                className="flex items-center gap-1.5 px-4 py-2.5 border border-[oklch(0.88_0.01_250)] rounded-lg text-sm text-[oklch(0.42_0.04_250)] hover:border-[oklch(0.64_0.03_250)] hover:text-[oklch(0.25_0.04_250)] transition-colors font-['Source_Sans_3',sans-serif]"
+                className="flex items-center gap-1.5 px-4 py-2.5 border border-border rounded-lg text-sm text-muted-foreground hover:border-muted-foreground hover:text-foreground transition-colors font-['Source_Sans_3',sans-serif]"
               >
                 <ChevronLeft size={16} />
                 Previous
@@ -680,7 +701,7 @@ function StepView({
             {nextStep && (
               <button
                 onClick={() => onNavigate(nextStep.id)}
-                className="flex items-center gap-1.5 px-4 py-2.5 border border-[oklch(0.88_0.01_250)] rounded-lg text-sm text-[oklch(0.42_0.04_250)] hover:border-[oklch(0.64_0.03_250)] hover:text-[oklch(0.25_0.04_250)] transition-colors font-['Source_Sans_3',sans-serif]"
+                className="flex items-center gap-1.5 px-4 py-2.5 border border-border rounded-lg text-sm text-muted-foreground hover:border-muted-foreground hover:text-foreground transition-colors font-['Source_Sans_3',sans-serif]"
               >
                 Next
                 <ChevronRight size={16} />
