@@ -13,10 +13,11 @@ import {
   ChevronLeft, Clock, Menu, X, Check, Lock, Network,
   ShieldOff, Plug, Package, GitBranch, Key, Play,
   Wand2, Rocket, Monitor, Bot, Link, RefreshCw,
-  Shield, UserCheck, Box, AlertTriangle
+  Shield, UserCheck, Box, AlertTriangle, Wrench
 } from "lucide-react";
 import { PARTS, STEPS, TOTAL_STEPS, type Part, type Step } from "@/lib/guideData";
 import StepContentRenderer from "@/components/StepContent";
+import Troubleshooting from "./Troubleshooting";
 
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   BookOpen, Wifi, Server, Download, LayoutDashboard,
@@ -44,6 +45,7 @@ export default function Home() {
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showHero, setShowHero] = useState(true);
+  const [showTroubleshooting, setShowTroubleshooting] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const currentStep = STEPS.find((s) => s.id === currentStepId) ?? STEPS[0];
@@ -60,6 +62,14 @@ export default function Home() {
 
   const navigateTo = (stepId: number) => {
     setCurrentStepId(stepId);
+    setShowHero(false);
+    setShowTroubleshooting(false);
+    setSidebarOpen(false);
+    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const openTroubleshooting = () => {
+    setShowTroubleshooting(true);
     setShowHero(false);
     setSidebarOpen(false);
     contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
@@ -120,15 +130,28 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Right: current part badge */}
-          {currentPart && !showHero && (
-            <div className="flex items-center gap-1.5 text-xs text-[oklch(0.52_0.03_250)] font-['Source_Sans_3',sans-serif]">
-              <span className="hidden md:block">Part {currentPart.id}:</span>
-              <span className="font-semibold text-[oklch(0.32_0.12_250)] hidden md:block">
-                {currentPart.shortTitle}
-              </span>
-            </div>
-          )}
+          {/* Right: troubleshooting button + current part badge */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={openTroubleshooting}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold font-['Source_Sans_3',sans-serif] transition-all ${
+                showTroubleshooting
+                  ? "bg-[oklch(0.32_0.12_250)] text-white border-[oklch(0.32_0.12_250)]"
+                  : "border-[oklch(0.88_0.01_250)] text-[oklch(0.52_0.03_250)] hover:border-[oklch(0.32_0.12_250)] hover:text-[oklch(0.32_0.12_250)]"
+              }`}
+            >
+              <Wrench size={13} />
+              <span className="hidden sm:block">Troubleshooting</span>
+            </button>
+            {currentPart && !showHero && !showTroubleshooting && (
+              <div className="flex items-center gap-1.5 text-xs text-[oklch(0.52_0.03_250)] font-['Source_Sans_3',sans-serif]">
+                <span className="hidden md:block">Part {currentPart.id}:</span>
+                <span className="font-semibold text-[oklch(0.32_0.12_250)] hidden md:block">
+                  {currentPart.shortTitle}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -244,14 +267,26 @@ export default function Home() {
               })}
             </div>
 
-            {/* Reset button */}
-            <div className="px-5 py-4 border-t border-[oklch(0.28_0.04_250)]">
+            {/* Troubleshooting + Reset */}
+            <div className="px-5 py-4 border-t border-[oklch(0.28_0.04_250)] space-y-2">
+              <button
+                onClick={openTroubleshooting}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold font-['Source_Sans_3',sans-serif] transition-all ${
+                  showTroubleshooting
+                    ? "bg-[oklch(0.32_0.12_250)] text-white"
+                    : "bg-[oklch(0.25_0.04_250)] text-[oklch(0.76_0.02_250)] hover:bg-[oklch(0.28_0.04_250)]"
+                }`}
+              >
+                <Wrench size={13} />
+                Troubleshooting
+              </button>
               <button
                 onClick={() => {
                   if (confirm("Reset all progress?")) {
-                    setCompletedSteps(new Set());
+                    setCompletedSteps(new Set<number>());
                     setCurrentStepId(1);
                     setShowHero(true);
+                    setShowTroubleshooting(false);
                   }
                 }}
                 className="w-full text-xs text-[oklch(0.52_0.03_250)] hover:text-[oklch(0.64_0.03_250)] transition-colors font-['Source_Sans_3',sans-serif] text-center py-1"
@@ -268,7 +303,23 @@ export default function Home() {
           className="flex-1 overflow-y-auto"
         >
           <AnimatePresence mode="wait">
-            {showHero ? (
+            {showTroubleshooting ? (
+              <motion.div
+                key="troubleshooting"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Troubleshooting
+                  onBack={() => {
+                    setShowTroubleshooting(false);
+                    setShowHero(true);
+                    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                />
+              </motion.div>
+            ) : showHero ? (
               <motion.div
                 key="hero"
                 initial={{ opacity: 0 }}
@@ -285,6 +336,7 @@ export default function Home() {
                   completedSet={completedSteps}
                   onNavigate={navigateTo}
                   steps={STEPS}
+                  onTroubleshooting={openTroubleshooting}
                 />
               </motion.div>
             ) : (
@@ -318,6 +370,7 @@ export default function Home() {
 
 function HeroSection({
   onStart,
+  onTroubleshooting,
   completedSteps,
   totalSteps,
   progressPct,
@@ -327,6 +380,7 @@ function HeroSection({
   steps,
 }: {
   onStart: () => void;
+  onTroubleshooting: () => void;
   completedSteps: number;
   totalSteps: number;
   progressPct: number;
