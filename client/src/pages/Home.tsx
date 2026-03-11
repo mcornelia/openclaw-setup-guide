@@ -23,6 +23,8 @@ import CommonIssuesPanel from "@/components/CommonIssuesPanel";
 import TopProgressBar from "@/components/TopProgressBar";
 import StepTroubleshootingHelper from "@/components/StepTroubleshootingHelper";
 import StepNotes from "@/components/StepNotes";
+import NotesReview from "./NotesReview";
+import { NotebookPen } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   BookOpen, Wifi, Server, Download, LayoutDashboard,
@@ -51,6 +53,7 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showHero, setShowHero] = useState(true);
   const [showTroubleshooting, setShowTroubleshooting] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const currentStep = STEPS.find((s) => s.id === currentStepId) ?? STEPS[0];
@@ -87,6 +90,7 @@ export default function Home() {
     setCurrentStepId(stepId);
     setShowHero(false);
     setShowTroubleshooting(false);
+    setShowNotes(false);
     setSidebarOpen(false);
     contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -94,6 +98,15 @@ export default function Home() {
   const openTroubleshooting = () => {
     setShowTroubleshooting(true);
     setShowHero(false);
+    setShowNotes(false);
+    setSidebarOpen(false);
+    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const openNotes = () => {
+    setShowNotes(true);
+    setShowHero(false);
+    setShowTroubleshooting(false);
     setSidebarOpen(false);
     contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -166,6 +179,18 @@ export default function Home() {
               </motion.div>
             </button>
 
+            <button
+              onClick={openNotes}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold font-['Source_Sans_3',sans-serif] transition-all ${
+                showNotes
+                  ? "bg-amber-500 text-white border-amber-500"
+                  : "border-border text-muted-foreground hover:border-amber-400 hover:text-amber-600"
+              }`}
+              title="View my configuration notes"
+            >
+              <NotebookPen size={13} />
+              <span className="hidden sm:block">My Notes</span>
+            </button>
             <button
               onClick={openTroubleshooting}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold font-['Source_Sans_3',sans-serif] transition-all ${
@@ -320,8 +345,19 @@ export default function Home() {
               })}
             </div>
 
-            {/* Troubleshooting + Reset */}
+            {/* Notes + Troubleshooting + Reset */}
             <div className="px-5 py-4 border-t border-[oklch(0.28_0.04_250)] space-y-2">
+              <button
+                onClick={openNotes}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold font-['Source_Sans_3',sans-serif] transition-all ${
+                  showNotes
+                    ? "bg-[oklch(0.55_0.18_60)] text-white"
+                    : "bg-[oklch(0.25_0.04_250)] text-[oklch(0.76_0.02_250)] hover:bg-[oklch(0.28_0.04_250)]"
+                }`}
+              >
+                <NotebookPen size={13} />
+                My Notes
+              </button>
               <button
                 onClick={openTroubleshooting}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold font-['Source_Sans_3',sans-serif] transition-all ${
@@ -356,7 +392,24 @@ export default function Home() {
           className="flex-1 overflow-y-auto bg-background transition-colors duration-300"
         >
           <AnimatePresence mode="wait">
-            {showTroubleshooting ? (
+            {showNotes ? (
+              <motion.div
+                key="notes-review"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.3 }}
+              >
+                <NotesReview
+                  onClose={() => {
+                    setShowNotes(false);
+                    setShowHero(true);
+                    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  onGoToStep={(stepId) => navigateTo(stepId)}
+                />
+              </motion.div>
+            ) : showTroubleshooting ? (
               <motion.div
                 key="troubleshooting"
                 initial={{ opacity: 0, y: 16 }}
