@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { PARTS, STEPS, TOTAL_STEPS, type Part, type Step } from "@/lib/guideData";
+import { TROUBLESHOOTING_ENTRIES, type TroubleshootingEntry } from "@/lib/troubleshootingData";
 import StepContentRenderer from "@/components/StepContent";
 import Troubleshooting from "./Troubleshooting";
 import CommonIssuesPanel from "@/components/CommonIssuesPanel";
@@ -25,6 +26,16 @@ import StepTroubleshootingHelper from "@/components/StepTroubleshootingHelper";
 import StepNotes from "@/components/StepNotes";
 import NotesReview from "./NotesReview";
 import { NotebookPen } from "lucide-react";
+
+// Build a map of stepId → count of critical articles tagged to that step
+const CRITICAL_STEP_MAP: Record<number, number> = {};
+TROUBLESHOOTING_ENTRIES.forEach((item: TroubleshootingEntry) => {
+  if (item.severity === "critical" && item.relatedStepIds) {
+    item.relatedStepIds.forEach((sid: number) => {
+      CRITICAL_STEP_MAP[sid] = (CRITICAL_STEP_MAP[sid] ?? 0) + 1;
+    });
+  }
+});
 
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   BookOpen, Wifi, Server, Download, LayoutDashboard,
@@ -305,39 +316,75 @@ export default function Home() {
                     {partSteps.map((step) => {
                       const isActive = step.id === currentStepId && !showHero;
                       const isDone = completedSteps.has(step.id);
+                      const criticalCount = CRITICAL_STEP_MAP[step.id] ?? 0;
+                      const hasCritical = criticalCount > 0 && !isDone;
 
                       return (
-                        <button
-                          key={step.id}
-                          onClick={() => navigateTo(step.id)}
-                          className={`w-full flex items-center gap-3 px-5 py-2.5 text-left transition-all duration-150 ${
-                            isActive
-                              ? "bg-[oklch(0.32_0.12_250)] text-white"
-                              : "hover:bg-[oklch(0.25_0.04_250)] text-[oklch(0.76_0.02_250)]"
-                          }`}
-                        >
-                          {/* Step indicator */}
-                          <div
-                            className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold transition-all ${
-                              isDone
-                                ? "bg-[oklch(0.60_0.16_162)] text-white"
-                                : isActive
-                                ? "bg-white text-[oklch(0.32_0.12_250)]"
-                                : "border border-[oklch(0.42_0.04_250)] text-[oklch(0.52_0.03_250)]"
+                        <div key={step.id} className="relative group/steprow">
+                          <button
+                            onClick={() => navigateTo(step.id)}
+                            className={`w-full flex items-center gap-3 px-5 py-2.5 text-left transition-all duration-150 ${
+                              isActive
+                                ? "bg-[oklch(0.32_0.12_250)] text-white"
+                                : "hover:bg-[oklch(0.25_0.04_250)] text-[oklch(0.76_0.02_250)]"
                             }`}
                           >
-                            {isDone ? <Check size={10} strokeWidth={3} /> : step.id}
-                          </div>
-                          <span className="text-xs font-['Source_Sans_3',sans-serif] leading-tight">
-                            {step.shortTitle}
-                          </span>
-                          {step.estimatedMinutes && (
-                            <span className="ml-auto text-[10px] text-[oklch(0.42_0.04_250)] flex items-center gap-0.5 flex-shrink-0">
-                              <Clock size={9} />
-                              {step.estimatedMinutes}m
+                            {/* Step indicator */}
+                            <div
+                              className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold transition-all ${
+                                isDone
+                                  ? "bg-[oklch(0.60_0.16_162)] text-white"
+                                  : isActive
+                                  ? "bg-white text-[oklch(0.32_0.12_250)]"
+                                  : "border border-[oklch(0.42_0.04_250)] text-[oklch(0.52_0.03_250)]"
+                              }`}
+                            >
+                              {isDone ? <Check size={10} strokeWidth={3} /> : step.id}
+                            </div>
+                            <span className="text-xs font-['Source_Sans_3',sans-serif] leading-tight flex-1 min-w-0 truncate">
+                              {step.shortTitle}
                             </span>
+                            {/* Critical warning icon — shown when step has critical articles and is not done */}
+                            {hasCritical && (
+                              <span
+                                className={`flex-shrink-0 flex items-center justify-center w-4 h-4 rounded-full transition-colors ${
+                                  isActive
+                                    ? "text-amber-300"
+                                    : "text-amber-400 group-hover/steprow:text-amber-300"
+                                }`}
+                                title={`${criticalCount} critical issue${criticalCount !== 1 ? "s" : ""} known for this step`}
+                              >
+                                <AlertTriangle size={11} strokeWidth={2.5} />
+                              </span>
+                            )}
+                            {/* Time estimate — only show if no critical icon, to avoid crowding */}
+                            {!hasCritical && step.estimatedMinutes && (
+                              <span className="ml-auto text-[10px] text-[oklch(0.42_0.04_250)] flex items-center gap-0.5 flex-shrink-0">
+                                <Clock size={9} />
+                                {step.estimatedMinutes}m
+                              </span>
+                            )}
+                          </button>
+
+                          {/* Tooltip — appears on hover, shows critical article count + hint */}
+                          {hasCritical && (
+                            <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 hidden group-hover/steprow:flex">
+                              <div className="bg-[oklch(0.15_0.03_250)] border border-amber-500/40 rounded-lg px-3 py-2 shadow-xl w-52">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <AlertTriangle size={11} className="text-amber-400 flex-shrink-0" />
+                                  <span className="text-[11px] font-bold text-amber-400 font-['Source_Sans_3',sans-serif]">
+                                    {criticalCount} critical issue{criticalCount !== 1 ? "s" : ""}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-[oklch(0.65_0.02_250)] font-['Source_Sans_3',sans-serif] leading-snug">
+                                  Known problems for this step. Check the troubleshooting panel before you start.
+                                </p>
+                              </div>
+                              {/* Arrow */}
+                              <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-[oklch(0.15_0.03_250)]" />
+                            </div>
                           )}
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
