@@ -2,7 +2,7 @@
  * StepNotes
  * Blueprint Design — Swiss Modernism
  * Per-step personal notes textarea with auto-save to localStorage.
- * Sits between step content and the troubleshooting helper.
+ * Delete uses an inline undo toast (5-second window) instead of a two-click confirm.
  *
  * Storage key: `openclaw-note-step-{stepId}`
  * Max length: 1000 characters
@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { NotebookPen, Check, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { NotebookPen, Check, Trash2, ChevronDown, ChevronUp, Undo2 } from "lucide-react";
 
 // ── Per-step placeholder prompts ─────────────────────────────────────────────
 
@@ -41,6 +41,7 @@ const DEFAULT_PLACEHOLDER = "Add your personal notes for this step — server IP
 const MAX_LENGTH = 1000;
 const STORAGE_KEY_PREFIX = "openclaw-note-step-";
 const DEBOUNCE_MS = 600;
+const UNDO_WINDOW_MS = 5000;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -68,6 +69,84 @@ function saveNote(stepId: number, text: string) {
   }
 }
 
+// ── Undo Toast ────────────────────────────────────────────────────────────────
+
+interface UndoToastProps {
+  onUndo: () => void;
+  onDismiss: () => void;
+  timeoutMs: number;
+}
+
+function UndoToast({ onUndo, onDismiss, timeoutMs }: UndoToastProps) {
+  const [progress, setProgress] = useState(100);
+  const startRef = useRef(Date.now());
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const tick = () => {
+      const elapsed = Date.now() - startRef.current;
+      const remaining = Math.max(0, 100 - (elapsed / timeoutMs) * 100);
+      setProgress(remaining);
+      if (remaining > 0) {
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [timeoutMs]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 4, scale: 0.97 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className="mt-2 rounded-xl border border-red-300/60 bg-red-50 dark:bg-red-950/30 dark:border-red-500/30 overflow-hidden"
+    >
+      <div className="flex items-center gap-3 px-4 py-2.5">
+        {/* Icon */}
+        <div className="w-6 h-6 rounded-md bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0">
+          <Trash2 size={12} className="text-red-500" />
+        </div>
+
+        {/* Message */}
+        <p className="flex-1 text-xs font-semibold text-red-700 dark:text-red-400 font-['Source_Sans_3',sans-serif]">
+          Note deleted
+        </p>
+
+        {/* Undo button */}
+        <button
+          onClick={onUndo}
+          className="flex items-center gap-1.5 text-xs font-bold font-['Source_Sans_3',sans-serif] px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors flex-shrink-0"
+        >
+          <Undo2 size={11} />
+          Undo
+        </button>
+
+        {/* Dismiss */}
+        <button
+          onClick={onDismiss}
+          className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors font-['Source_Sans_3',sans-serif] flex-shrink-0"
+          aria-label="Dismiss"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Countdown progress bar */}
+      <div className="h-0.5 bg-red-100 dark:bg-red-900/40">
+        <motion.div
+          className="h-full bg-red-400 dark:bg-red-500"
+          style={{ width: `${progress}%` }}
+          transition={{ duration: 0.05 }}
+        />
+      </div>
+    </motion.div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 interface StepNotesProps {
@@ -78,15 +157,17 @@ export default function StepNotes({ stepId }: StepNotesProps) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(() => loadNote(stepId));
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [deletedText, setDeletedText] = useState<string | null>(null); // undo buffer
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // When stepId changes (user navigates to another step), reload note
+  // When stepId changes (user navigates to another step), reload note and clear undo state
   useEffect(() => {
     setText(loadNote(stepId));
     setSaveState("idle");
-    setShowClearConfirm(false);
+    setDeletedText(null);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
   }, [stepId]);
 
   // Auto-expand if there's already a note for this step
@@ -120,19 +201,39 @@ export default function StepNotes({ stepId }: StepNotesProps) {
     [stepId]
   );
 
-  // Clear note
-  const handleClear = useCallback(() => {
-    if (!showClearConfirm) {
-      setShowClearConfirm(true);
-      setTimeout(() => setShowClearConfirm(false), 3000);
-      return;
-    }
+  // Delete note — store in undo buffer, clear from storage, start 5s timer
+  const handleDelete = useCallback(() => {
+    const snapshot = text;
     setText("");
     saveNote(stepId, "");
     setSaveState("idle");
-    setShowClearConfirm(false);
-    textareaRef.current?.focus();
-  }, [showClearConfirm, stepId]);
+    setDeletedText(snapshot);
+
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = setTimeout(() => {
+      setDeletedText(null);
+    }, UNDO_WINDOW_MS);
+  }, [text, stepId]);
+
+  // Undo — restore from buffer
+  const handleUndo = useCallback(() => {
+    if (deletedText === null) return;
+    setText(deletedText);
+    saveNote(stepId, deletedText);
+    setSaveState("saved");
+    setTimeout(() => setSaveState("idle"), 2000);
+    setDeletedText(null);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    // Re-open panel so user sees the restored note
+    setOpen(true);
+    setTimeout(() => textareaRef.current?.focus(), 150);
+  }, [deletedText, stepId]);
+
+  // Dismiss undo toast
+  const handleDismissUndo = useCallback(() => {
+    setDeletedText(null);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+  }, []);
 
   const hasNote = text.trim().length > 0;
   const charPct = (text.length / MAX_LENGTH) * 100;
@@ -169,6 +270,8 @@ export default function StepNotes({ stepId }: StepNotesProps) {
           <p className="text-xs text-muted-foreground font-['Source_Sans_3',sans-serif] truncate">
             {hasNote
               ? text.trim().slice(0, 60) + (text.trim().length > 60 ? "…" : "")
+              : deletedText !== null
+              ? "Note deleted — click Undo to restore"
               : "Tap to add personal notes for this step"}
           </p>
         </div>
@@ -210,6 +313,18 @@ export default function StepNotes({ stepId }: StepNotesProps) {
           {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </span>
       </button>
+
+      {/* Undo toast — shown outside the collapsible panel so it's always visible */}
+      <AnimatePresence>
+        {deletedText !== null && (
+          <UndoToast
+            key="undo-toast"
+            onUndo={handleUndo}
+            onDismiss={handleDismissUndo}
+            timeoutMs={UNDO_WINDOW_MS}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Notes panel */}
       <AnimatePresence initial={false}>
@@ -259,19 +374,15 @@ export default function StepNotes({ stepId }: StepNotesProps) {
                     </span>
                   </div>
 
-                  {/* Clear button */}
+                  {/* Delete button — single click, undo toast replaces confirm */}
                   {hasNote && (
                     <button
-                      onClick={handleClear}
-                      className={`flex items-center gap-1 text-[11px] font-semibold font-['Source_Sans_3',sans-serif] px-2 py-1 rounded transition-colors ${
-                        showClearConfirm
-                          ? "text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400"
-                          : "text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      }`}
-                      title={showClearConfirm ? "Click again to confirm" : "Clear note"}
+                      onClick={handleDelete}
+                      className="flex items-center gap-1 text-[11px] font-semibold font-['Source_Sans_3',sans-serif] px-2 py-1 rounded transition-colors text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      title="Delete note (you can undo)"
                     >
                       <Trash2 size={11} />
-                      {showClearConfirm ? "Confirm clear?" : "Clear"}
+                      Delete
                     </button>
                   )}
 

@@ -5,15 +5,16 @@
  * Reads from localStorage keys: openclaw-note-step-{id}
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   NotebookPen, Copy, Check, Download, ChevronRight,
-  FileText, AlertCircle, Pencil, RefreshCw,
+  FileText, AlertCircle, Pencil, RefreshCw, Trash2, Undo2,
 } from "lucide-react";
 import { PARTS, STEPS } from "@/lib/guideData";
 
 const STORAGE_KEY_PREFIX = "openclaw-note-step-";
+const UNDO_WINDOW_MS = 5000;
 
 function loadNote(stepId: number): string {
   try {
@@ -123,19 +124,96 @@ function CopyButton({
   );
 }
 
+// ── Undo Toast (inline, for NotesReview) ─────────────────────────────────────
+
+function InlineUndoToast({
+  onUndo,
+  onDismiss,
+  timeoutMs,
+}: {
+  onUndo: () => void;
+  onDismiss: () => void;
+  timeoutMs: number;
+}) {
+  const [progress, setProgress] = useState(100);
+  const startRef = useRef(Date.now());
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    startRef.current = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - startRef.current;
+      const remaining = Math.max(0, 100 - (elapsed / timeoutMs) * 100);
+      setProgress(remaining);
+      if (remaining > 0) {
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [timeoutMs]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0, scale: 0.97 }}
+      animate={{ opacity: 1, height: "auto", scale: 1 }}
+      exit={{ opacity: 0, height: 0, scale: 0.97 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className="overflow-hidden"
+    >
+      <div className="mt-2 rounded-xl border border-red-300/60 bg-red-50 dark:bg-red-950/30 dark:border-red-500/30 overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-2.5">
+          <div className="w-6 h-6 rounded-md bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0">
+            <Trash2 size={12} className="text-red-500" />
+          </div>
+          <p className="flex-1 text-xs font-semibold text-red-700 dark:text-red-400 font-['Source_Sans_3',sans-serif]">
+            Note deleted
+          </p>
+          <button
+            onClick={onUndo}
+            className="flex items-center gap-1.5 text-xs font-bold font-['Source_Sans_3',sans-serif] px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors flex-shrink-0"
+          >
+            <Undo2 size={11} />
+            Undo
+          </button>
+          <button
+            onClick={onDismiss}
+            className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors font-['Source_Sans_3',sans-serif] flex-shrink-0"
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="h-0.5 bg-red-100 dark:bg-red-900/40">
+          <div
+            className="h-full bg-red-400 dark:bg-red-500 transition-none"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ── Single note card ──────────────────────────────────────────────────────────
 
 function NoteCard({
   note,
   onGoToStep,
+  onDelete,
 }: {
   note: StepNote;
   onGoToStep: (stepId: number) => void;
+  onDelete: (stepId: number, text: string) => void;
 }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -4, scale: 0.98 }}
+      layout
       className="rounded-xl border border-border bg-card overflow-hidden"
     >
       {/* Header */}
@@ -158,6 +236,13 @@ function NoteCard({
             <Pencil size={11} />
             Edit
           </button>
+          <button
+            onClick={() => onDelete(note.stepId, note.text)}
+            className="flex items-center gap-1 text-xs font-semibold font-['Source_Sans_3',sans-serif] px-2.5 py-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-red-500 hover:border-red-300 transition-colors"
+            title="Delete this note (you can undo)"
+          >
+            <Trash2 size={11} />
+          </button>
         </div>
       </div>
 
@@ -176,9 +261,11 @@ function NoteCard({
 function PartSection({
   group,
   onGoToStep,
+  onDelete,
 }: {
   group: PartGroup;
   onGoToStep: (stepId: number) => void;
+  onDelete: (stepId: number, text: string) => void;
 }) {
   if (group.notes.length === 0) return null;
 
@@ -204,9 +291,11 @@ function PartSection({
 
       {/* Note cards */}
       <div className="space-y-3 pl-11">
-        {group.notes.map((note) => (
-          <NoteCard key={note.stepId} note={note} onGoToStep={onGoToStep} />
-        ))}
+        <AnimatePresence>
+          {group.notes.map((note) => (
+            <NoteCard key={note.stepId} note={note} onGoToStep={onGoToStep} onDelete={onDelete} />
+          ))}
+        </AnimatePresence>
       </div>
     </section>
   );
@@ -251,6 +340,9 @@ interface NotesReviewProps {
 export default function NotesReview({ onClose, onGoToStep }: NotesReviewProps) {
   const [groups, setGroups] = useState<PartGroup[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  // Undo state: { stepId, text } for the most recently deleted note
+  const [undoBuffer, setUndoBuffer] = useState<{ stepId: number; text: string } | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load notes from localStorage
   useEffect(() => {
@@ -258,6 +350,29 @@ export default function NotesReview({ onClose, onGoToStep }: NotesReviewProps) {
   }, [refreshKey]);
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
+  // Delete a note from the review page — store in undo buffer, remove from storage, refresh
+  const handleDelete = useCallback((stepId: number, text: string) => {
+    try { localStorage.removeItem(`${STORAGE_KEY_PREFIX}${stepId}`); } catch {}
+    setUndoBuffer({ stepId, text });
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = setTimeout(() => setUndoBuffer(null), UNDO_WINDOW_MS);
+    setRefreshKey((k) => k + 1);
+  }, []);
+
+  // Undo — restore from buffer
+  const handleUndo = useCallback(() => {
+    if (!undoBuffer) return;
+    try { localStorage.setItem(`${STORAGE_KEY_PREFIX}${undoBuffer.stepId}`, undoBuffer.text); } catch {}
+    setUndoBuffer(null);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setRefreshKey((k) => k + 1);
+  }, [undoBuffer]);
+
+  const handleDismissUndo = useCallback(() => {
+    setUndoBuffer(null);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+  }, []);
 
   const allNotes = groups.flatMap((g) => g.notes);
   const totalNotes = allNotes.length;
@@ -278,6 +393,18 @@ export default function NotesReview({ onClose, onGoToStep }: NotesReviewProps) {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-8 py-8 pb-24">
+      {/* Undo toast — fixed at top of content area */}
+      <AnimatePresence>
+        {undoBuffer && (
+          <InlineUndoToast
+            key="review-undo"
+            onUndo={handleUndo}
+            onDismiss={handleDismissUndo}
+            timeoutMs={UNDO_WINDOW_MS}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Page header */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
@@ -385,6 +512,7 @@ export default function NotesReview({ onClose, onGoToStep }: NotesReviewProps) {
                 onGoToStep={(stepId) => {
                   onGoToStep(stepId);
                 }}
+                onDelete={handleDelete}
               />
             ))}
 
