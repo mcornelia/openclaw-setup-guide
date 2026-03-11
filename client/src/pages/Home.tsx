@@ -22,6 +22,7 @@ import Troubleshooting from "./Troubleshooting";
 import CommonIssuesPanel from "@/components/CommonIssuesPanel";
 import TopProgressBar from "@/components/TopProgressBar";
 import StepTroubleshootingHelper from "@/components/StepTroubleshootingHelper";
+import StepNotes from "@/components/StepNotes";
 
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   BookOpen, Wifi, Server, Download, LayoutDashboard,
@@ -670,6 +671,9 @@ function StepView({
       <div className="step-content">
         <StepContentRenderer content={step.content} stepId={step.id} />
       </div>
+
+      {/* Personal notes */}
+      <StepNotes stepId={step.id} />
 
       {/* Contextual troubleshooting helper */}
       <StepTroubleshootingHelper
