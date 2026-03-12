@@ -13,7 +13,7 @@ import {
   ChevronLeft, Clock, Menu, X, Check, Lock, Network,
   ShieldOff, Plug, Package, GitBranch, Key, Play,
   Wand2, Rocket, Monitor, Bot, Link, RefreshCw,
-  Shield, UserCheck, Box, AlertTriangle, Wrench, Sun, Moon
+  Shield, UserCheck, Box, AlertTriangle, Wrench, Sun, Moon, CheckCircle2
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { PARTS, STEPS, TOTAL_STEPS, type Part, type Step } from "@/lib/guideData";
@@ -25,6 +25,7 @@ import TopProgressBar from "@/components/TopProgressBar";
 import StepTroubleshootingHelper from "@/components/StepTroubleshootingHelper";
 import StepNotes from "@/components/StepNotes";
 import NotesReview from "./NotesReview";
+import CompletionScreen from "@/components/CompletionScreen";
 import { NotebookPen } from "lucide-react";
 
 // Build a map of stepId → count of critical articles tagged to that step
@@ -65,6 +66,10 @@ export default function Home() {
   const [showHero, setShowHero] = useState(true);
   const [showTroubleshooting, setShowTroubleshooting] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [showCompletion, setShowCompletion] = useState(false);
+  const [completedAt, setCompletedAt] = useState<string | null>(
+    () => localStorage.getItem("openclaw-completed-at")
+  );
   const contentRef = useRef<HTMLDivElement>(null);
 
   const currentStep = STEPS.find((s) => s.id === currentStepId) ?? STEPS[0];
@@ -102,6 +107,7 @@ export default function Home() {
     setShowHero(false);
     setShowTroubleshooting(false);
     setShowNotes(false);
+    setShowCompletion(false);
     setSidebarOpen(false);
     contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -110,6 +116,7 @@ export default function Home() {
     setShowTroubleshooting(true);
     setShowHero(false);
     setShowNotes(false);
+    setShowCompletion(false);
     setSidebarOpen(false);
     contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -117,6 +124,16 @@ export default function Home() {
   const openNotes = () => {
     setShowNotes(true);
     setShowHero(false);
+    setShowTroubleshooting(false);
+    setShowCompletion(false);
+    setSidebarOpen(false);
+    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const openCompletion = () => {
+    setShowCompletion(true);
+    setShowHero(false);
+    setShowNotes(false);
     setShowTroubleshooting(false);
     setSidebarOpen(false);
     contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
@@ -126,10 +143,16 @@ export default function Home() {
     const next = new Set(completedSteps);
     next.add(currentStepId);
     setCompletedSteps(next);
-    // Auto-advance to next step
     const idx = STEPS.findIndex((s) => s.id === currentStepId);
     if (idx < STEPS.length - 1) {
+      // Auto-advance to next step
       setTimeout(() => navigateTo(STEPS[idx + 1].id), 300);
+    } else {
+      // Final step — show completion screen
+      const now = new Date().toISOString();
+      setCompletedAt(now);
+      localStorage.setItem("openclaw-completed-at", now);
+      setTimeout(() => openCompletion(), 400);
     }
   };
 
@@ -394,6 +417,20 @@ export default function Home() {
 
             {/* Notes + Troubleshooting + Reset */}
             <div className="px-5 py-4 border-t border-[oklch(0.28_0.04_250)] space-y-2">
+              {/* Completion button — only shown when all steps are done */}
+              {completedSteps.size === TOTAL_STEPS && (
+                <button
+                  onClick={openCompletion}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold font-['Source_Sans_3',sans-serif] transition-all ${
+                    showCompletion
+                      ? "bg-[oklch(0.52_0.15_162)] text-white"
+                      : "bg-[oklch(0.30_0.10_162)] text-[oklch(0.82_0.10_162)] hover:bg-[oklch(0.36_0.12_162)]"
+                  }`}
+                >
+                  <CheckCircle2 size={13} />
+                  Setup Complete!
+                </button>
+              )}
               <button
                 onClick={openNotes}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold font-['Source_Sans_3',sans-serif] transition-all ${
@@ -439,7 +476,32 @@ export default function Home() {
           className="flex-1 overflow-y-auto bg-background transition-colors duration-300"
         >
           <AnimatePresence mode="wait">
-            {showNotes ? (
+            {showCompletion ? (
+              <motion.div
+                key="completion"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.4 }}
+              >
+                <CompletionScreen
+                  completedAt={completedAt}
+                  onReset={() => {
+                    if (!confirm("Reset all progress? This cannot be undone.")) return;
+                    localStorage.removeItem("openclaw-completed-steps");
+                    localStorage.removeItem("openclaw-current-step");
+                    localStorage.removeItem("openclaw-completed-at");
+                    setCompletedSteps(new Set());
+                    setCompletedAt(null);
+                    setCurrentStepId(1);
+                    setShowCompletion(false);
+                    setShowHero(true);
+                    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  onViewNotes={openNotes}
+                />
+              </motion.div>
+            ) : showNotes ? (
               <motion.div
                 key="notes-review"
                 initial={{ opacity: 0, y: 16 }}
