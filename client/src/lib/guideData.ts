@@ -222,6 +222,14 @@ export const STEPS: Step[] = [
     estimatedMinutes: 3,
     content: [
       {
+        type: "callout",
+        callout: {
+          type: "warning",
+          title: "Google Nest Router Specific Instructions",
+          body: "The steps in Part 2 (Steps 3–6) are written specifically for the Google Nest Wifi and Google Nest Wifi Pro (including the H2D model), using the Google Home app. If you have a different router brand — such as Asus, Netgear, TP-Link, Eero, or Ubiquiti — the same security goals apply, but the menu names, app interface, and exact toggle locations will be different. Consult your router’s manual or support site for equivalent settings.",
+        },
+      },
+      {
         type: "paragraph",
         text: "WPA3 is significantly more resistant to password-cracking attacks than the older WPA2 standard. Let's make sure your main Wi-Fi network is using the strongest available encryption before we do anything else.",
       },
@@ -253,6 +261,14 @@ export const STEPS: Step[] = [
     icon: "Network",
     estimatedMinutes: 5,
     content: [
+      {
+        type: "callout",
+        callout: {
+          type: "warning",
+          title: "Google Nest Router Specific Instructions",
+          body: "The steps in Part 2 (Steps 3–6) are written specifically for the Google Nest Wifi and Google Nest Wifi Pro (including the H2D model), using the Google Home app. If you have a different router brand — such as Asus, Netgear, TP-Link, Eero, or Ubiquiti — the same security goals apply, but the menu names, app interface, and exact toggle locations will be different. Consult your router’s manual or support site for equivalent settings.",
+        },
+      },
       {
         type: "paragraph",
         text: "This is the most important network-level security step available to you on the H2D. By placing your OpenClaw server on the Guest network, you create a digital barrier between it and your other devices — laptops, phones, smart TVs, and so on.",
@@ -288,6 +304,14 @@ export const STEPS: Step[] = [
     estimatedMinutes: 2,
     content: [
       {
+        type: "callout",
+        callout: {
+          type: "warning",
+          title: "Google Nest Router Specific Instructions",
+          body: "The steps in Part 2 (Steps 3–6) are written specifically for the Google Nest Wifi and Google Nest Wifi Pro (including the H2D model), using the Google Home app. If you have a different router brand — such as Asus, Netgear, TP-Link, Eero, or Ubiquiti — the same security goals apply, but the menu names, app interface, and exact toggle locations will be different. Consult your router’s manual or support site for equivalent settings.",
+        },
+      },
+      {
         type: "paragraph",
         text: "Universal Plug and Play (UPnP) is a feature that allows devices on your network to automatically open ports in your router's firewall. While convenient, it is a known security risk because malware or a compromised device can use it to open ports without your knowledge.",
       },
@@ -318,6 +342,14 @@ export const STEPS: Step[] = [
     icon: "Plug",
     estimatedMinutes: 2,
     content: [
+      {
+        type: "callout",
+        callout: {
+          type: "warning",
+          title: "Google Nest Router Specific Instructions",
+          body: "The steps in Part 2 (Steps 3–6) are written specifically for the Google Nest Wifi and Google Nest Wifi Pro (including the H2D model), using the Google Home app. If you have a different router brand — such as Asus, Netgear, TP-Link, Eero, or Ubiquiti — the same security goals apply, but the menu names, app interface, and exact toggle locations will be different. Consult your router’s manual or support site for equivalent settings.",
+        },
+      },
       {
         type: "paragraph",
         text: "On the computer you will use as your OpenClaw server, connect to the new HomeServer-Net Wi-Fi network you just created. From this point forward, all traffic to and from your server will be isolated from your main home network.",
