@@ -1,6 +1,6 @@
 /**
  * CompletionScreen — Blueprint Design
- * Shown when all 20 steps are marked complete.
+ * Shown when all steps are marked complete.
  * Displays a celebratory header, completion timestamp, notes summary
  * grouped by part, and copy/download actions.
  */
@@ -11,7 +11,7 @@ import {
   CheckCircle2, Download, Copy, Check, RotateCcw,
   BookOpen, FileText, Shield, Clock, Star, ChevronDown, ChevronUp
 } from "lucide-react";
-import { PARTS, STEPS, type Part } from "@/lib/guideData";
+import { PARTS, STEPS, TOTAL_STEPS, type Part } from "@/lib/guideData";
 
 interface CompletionScreenProps {
   completedAt: string | null; // ISO string stored in localStorage
@@ -185,8 +185,8 @@ export default function CompletionScreen({ completedAt, onReset, onViewNotes }: 
           className="flex items-center justify-center gap-6 flex-wrap"
         >
           {[
-            { icon: <CheckCircle2 size={14} />, label: "20 steps done", color: "text-[oklch(0.72_0.18_162)]" },
-            { icon: <Shield size={14} />, label: "8 security layers", color: "text-[oklch(0.65_0.14_250)]" },
+            { icon: <CheckCircle2 size={14} />, label: `${TOTAL_STEPS} steps done`, color: "text-[oklch(0.72_0.18_162)]" },
+            { icon: <Shield size={14} />, label: "9 security layers", color: "text-[oklch(0.65_0.14_250)]" },
             { icon: <FileText size={14} />, label: `${totalNotes} note${totalNotes !== 1 ? "s" : ""} saved`, color: "text-[oklch(0.75_0.16_60)]" },
           ].map((stat) => (
             <div key={stat.label} className={`flex items-center gap-1.5 text-sm font-['Source_Sans_3',sans-serif] ${stat.color}`}>

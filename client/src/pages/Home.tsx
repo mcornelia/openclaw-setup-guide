@@ -13,7 +13,8 @@ import {
   ChevronLeft, Clock, Menu, X, Check, Lock, Network,
   ShieldOff, Plug, Package, GitBranch, Key, Play,
   Wand2, Rocket, Monitor, Bot, Link, RefreshCw,
-  Shield, UserCheck, Box, AlertTriangle, Wrench, Sun, Moon, CheckCircle2
+  Shield, UserCheck, Box, AlertTriangle, Wrench, Sun, Moon, CheckCircle2,
+  Brain, FolderOpen
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { PARTS, STEPS, TOTAL_STEPS, type Part, type Step } from "@/lib/guideData";
@@ -43,7 +44,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: 
   MessageCircle, ShieldCheck, CheckSquare, Lock, Network,
   ShieldOff, Plug, Package, GitBranch, Key, Play,
   Wand2, Rocket, Monitor, Bot, Link, RefreshCw,
-  Shield, UserCheck, Box, AlertTriangle
+  Shield, UserCheck, Box, AlertTriangle, Brain, FolderOpen
 };
 
 function getIcon(name: string, size = 16) {
@@ -634,13 +635,13 @@ function HeroSection({
           <div className="flex items-center gap-2">
             <Clock size={16} className="text-muted-foreground" />
             <span className="text-sm text-muted-foreground font-['Source_Sans_3',sans-serif]">
-              ~90 minutes total
+              ~120 minutes total
             </span>
           </div>
           <div className="flex items-center gap-2">
             <CheckSquare size={16} className="text-muted-foreground" />
             <span className="text-sm text-muted-foreground font-['Source_Sans_3',sans-serif]">
-              {totalSteps} steps across 8 parts
+              {totalSteps} steps across {parts.length} parts
             </span>
           </div>
           <div className="flex items-center gap-2">

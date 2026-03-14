@@ -124,6 +124,14 @@ export const PARTS: Part[] = [
     description: "Verify every security step is complete before going live.",
     steps: [20],
   },
+  {
+    id: 9,
+    title: "Second Brain: Obsidian + Syncthing",
+    shortTitle: "Second Brain",
+    icon: "Brain",
+    description: "Set up an Obsidian vault on the same Mac Mini, mount it into OpenClaw via Docker, and sync it to your laptop using Syncthing — all without opening any inbound ports.",
+    steps: [21, 22, 23, 24, 25],
+  },
 ];
 
 export const STEPS: Step[] = [
@@ -905,6 +913,307 @@ docker image prune -f`,
           type: "success",
           title: "Review the Activity Log Regularly",
           body: "The OpenClaw dashboard includes a full activity log showing every action your agent has taken. Make it a habit to review this log periodically to ensure your agent is only doing what you expect.",
+        },
+      },
+    ],
+  },
+
+  // ─── PART 9: Second Brain ────────────────────────────────────────────────
+  {
+    id: 21,
+    part: 9,
+    title: "Understanding the Second Brain Architecture",
+    shortTitle: "Architecture",
+    icon: "Brain",
+    estimatedMinutes: 4,
+    content: [
+      {
+        type: "paragraph",
+        text: "A 'Second Brain' is a personal knowledge management system — a place where you capture notes, ideas, research, and tasks in a structured way. Obsidian is the ideal tool for this: it stores everything as plain Markdown files on disk, which means your AI agent can read and write to it directly without any special API.",
+      },
+      {
+        type: "paragraph",
+        text: "The architecture below shows how all three components — OpenClaw, the Obsidian vault, and Syncthing — coexist on your Mac Mini without any inbound network ports being opened. Syncthing uses outbound-only relay/NAT traversal to sync your vault to your laptop on the main network.",
+      },
+      {
+        type: "callout",
+        callout: {
+          type: "info",
+          title: "Why This Architecture Is Secure",
+          body: "Localhost is the most secure communication channel possible — no network traffic to intercept. OpenClaw accesses the vault via a Docker bind mount (a direct folder link), not over any network. Syncthing uses only outbound connections, so no new inbound firewall holes are needed on your Google Nest H2D.",
+        },
+      },
+      {
+        type: "table",
+        table: {
+          headers: ["Component", "Role", "Network Exposure"],
+          rows: [
+            { cells: ["Obsidian Vault", "Plain Markdown files stored at ~/second-brain on the Mac Mini", "None — local disk only"] },
+            { cells: ["OpenClaw (Docker)", "Reads and writes vault files via a bind mount at /vault inside the container", "None — localhost only"] },
+            { cells: ["Syncthing (Mac Mini)", "Watches ~/second-brain and syncs changes outbound to your laptop", "Outbound only — no inbound ports"] },
+            { cells: ["Syncthing (Laptop)", "Receives vault changes and stores them locally for Obsidian to open", "Outbound only"], highlight: true },
+            { cells: ["Obsidian (Laptop)", "Opens the synced vault folder for reading and editing on your main device", "None — local disk only"] },
+          ],
+        },
+      },
+      {
+        type: "callout",
+        callout: {
+          type: "success",
+          title: "Mac Mini Resource Usage",
+          body: "A Mac Mini (M1/M2 or Intel) has plenty of headroom for both OpenClaw and an Obsidian vault. Obsidian is a lightweight Electron app and the vault is just a folder of text files. Syncthing uses less than 50 MB of RAM at idle. These are not GPU-heavy workloads unless you add a local LLM.",
+        },
+      },
+    ],
+  },
+  {
+    id: 22,
+    part: 9,
+    title: "Create the Obsidian Vault on the Mac Mini",
+    shortTitle: "Create Vault",
+    icon: "FolderOpen",
+    estimatedMinutes: 5,
+    content: [
+      {
+        type: "paragraph",
+        text: "First, create the vault directory on your Mac Mini. This is the folder that OpenClaw will mount and Syncthing will watch. We place it in your home directory so it is outside the Docker container's own storage.",
+      },
+      {
+        type: "code",
+        codeBlocks: [
+          {
+            os: "macos",
+            label: "macOS Terminal",
+            language: "bash",
+            code: "# Create the vault directory\nmkdir -p ~/second-brain\n\n# Create a starter note so the vault is not empty\ncat > ~/second-brain/README.md << 'EOF'\n# My Second Brain\n\nThis vault is managed by Obsidian and accessible to your OpenClaw AI agent.\n\n## Structure\n- [[Inbox]] — quick capture\n- [[Projects]] — active work\n- [[Resources]] — reference material\n- [[Archive]] — completed items\nEOF\n\necho \"Vault created at: ~/second-brain\"",
+          },
+          {
+            os: "linux",
+            label: "Linux Terminal",
+            language: "bash",
+            code: "# Create the vault directory\nmkdir -p ~/second-brain\n\n# Create a starter note\ncat > ~/second-brain/README.md << 'EOF'\n# My Second Brain\n\nThis vault is managed by Obsidian and accessible to your OpenClaw AI agent.\nEOF\n\necho \"Vault created at: ~/second-brain\"",
+          },
+        ],
+      },
+      {
+        type: "paragraph",
+        text: "Next, install Obsidian on the Mac Mini so you can manage the vault locally when you are sitting at it. Obsidian is free for personal use.",
+      },
+      {
+        type: "substep",
+        substeps: [
+          "Go to https://obsidian.md and download the macOS .dmg installer.",
+          "Open the .dmg and drag Obsidian to your Applications folder.",
+          "Launch Obsidian and click 'Open folder as vault'.",
+          "Navigate to your home folder and select the second-brain folder you just created.",
+          "Click Open. Obsidian will open the vault and display your README.md.",
+        ],
+      },
+      {
+        type: "callout",
+        callout: {
+          type: "info",
+          title: "Vault Location Matters",
+          body: "Keep the vault at ~/second-brain (i.e., /Users/yourname/second-brain on macOS). This exact path is used in the Docker Compose file in the next step. If you choose a different location, update the bind mount path accordingly.",
+        },
+      },
+    ],
+  },
+  {
+    id: 23,
+    part: 9,
+    title: "Mount the Vault into OpenClaw via Docker",
+    shortTitle: "Mount Vault",
+    icon: "Link",
+    estimatedMinutes: 6,
+    content: [
+      {
+        type: "paragraph",
+        text: "Now we need to tell Docker to share the vault folder with the OpenClaw container. This is done with a bind mount — a direct link between a folder on your Mac Mini and a path inside the container. OpenClaw will see the vault at /vault and can read and write Markdown files there.",
+      },
+      {
+        type: "paragraph",
+        text: "Open your docker-compose.yml file (located at ~/openclaw/docker-compose.yml) and add the vault bind mount to the openclaw service:",
+      },
+      {
+        type: "code",
+        codeBlocks: [
+          {
+            label: "~/openclaw/docker-compose.yml (add the highlighted line)",
+            language: "yaml",
+            code: "services:\n  openclaw:\n    image: ghcr.io/openclaw/openclaw:latest\n    restart: unless-stopped\n    ports:\n      - \"127.0.0.1:3000:3000\"\n    volumes:\n      - ~/.openclaw:/root/.openclaw        # existing line\n      - ~/second-brain:/vault:ro            # ADD THIS LINE\n    environment:\n      - OPENCLAW_HOST=0.0.0.0",
+          },
+        ],
+      },
+      {
+        type: "callout",
+        callout: {
+          type: "warning",
+          title: "The :ro Flag Is Important",
+          body: "The :ro suffix mounts the vault as read-only inside the container. This means OpenClaw can read your notes but cannot accidentally delete or overwrite them. Remove :ro only if you explicitly want OpenClaw to be able to write new notes to your vault.",
+        },
+      },
+      {
+        type: "paragraph",
+        text: "After editing the file, restart the OpenClaw container to apply the new mount:",
+      },
+      {
+        type: "code",
+        codeBlocks: [
+          {
+            os: "macos",
+            label: "macOS / Linux Terminal",
+            language: "bash",
+            code: "cd ~/openclaw\ndocker compose down && docker compose up -d\n\n# Verify the vault is mounted correctly\ndocker exec openclaw ls /vault",
+          },
+        ],
+      },
+      {
+        type: "callout",
+        callout: {
+          type: "success",
+          title: "Vault Mounted Successfully",
+          body: "If the ls /vault command shows your Markdown files (including README.md), the bind mount is working correctly. OpenClaw can now reference your vault using the path /vault in any agent instructions.",
+        },
+      },
+    ],
+  },
+  {
+    id: 24,
+    part: 9,
+    title: "Install and Configure Syncthing",
+    shortTitle: "Install Syncthing",
+    icon: "RefreshCw",
+    estimatedMinutes: 10,
+    content: [
+      {
+        type: "paragraph",
+        text: "Syncthing is a free, open-source, peer-to-peer file synchronization tool. It syncs your vault between your Mac Mini and your laptop in real time, using only outbound connections — no cloud service, no inbound ports, and no subscription required.",
+      },
+      {
+        type: "paragraph",
+        text: "Install Syncthing on the Mac Mini first using Homebrew (the macOS package manager):",
+      },
+      {
+        type: "code",
+        codeBlocks: [
+          {
+            os: "macos",
+            label: "Mac Mini — Install via Homebrew",
+            language: "bash",
+            code: "# Install Homebrew if you don't have it\n/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"\n\n# Install Syncthing\nbrew install syncthing\n\n# Start Syncthing and enable it to launch at login\nbrew services start syncthing\n\n# Open the Syncthing web UI\nopen http://127.0.0.1:8384",
+          },
+          {
+            os: "linux",
+            label: "Linux Server — Install via apt",
+            language: "bash",
+            code: "# Add the Syncthing release key and repository\ncurl -s https://syncthing.net/release-key.txt | sudo apt-key add -\necho \"deb https://apt.syncthing.net/ syncthing stable\" | sudo tee /etc/apt/sources.list.d/syncthing.list\nsudo apt update && sudo apt install syncthing -y\n\n# Enable and start the service for your user\nsystemctl --user enable syncthing\nsystemctl --user start syncthing\n\n# Open the web UI (from the server's browser)\nxdg-open http://127.0.0.1:8384",
+          },
+        ],
+      },
+      {
+        type: "paragraph",
+        text: "Once the Syncthing web UI is open at http://127.0.0.1:8384, configure it to share your vault:",
+      },
+      {
+        type: "substep",
+        substeps: [
+          "In the Syncthing web UI, click 'Add Folder'.",
+          "Set the Folder Path to /Users/yourname/second-brain (replace yourname with your actual macOS username).",
+          "Give it a Folder Label such as 'Second Brain'.",
+          "Leave the Folder ID as the auto-generated value (you will need it on the laptop).",
+          "Click Save.",
+          "Note your Mac Mini's Device ID shown in the top-right of the UI — you will need it when setting up Syncthing on your laptop.",
+        ],
+      },
+      {
+        type: "paragraph",
+        text: "Now install Syncthing on your laptop (the device on your main home network) and pair the two devices:",
+      },
+      {
+        type: "substep",
+        substeps: [
+          "Download Syncthing for your laptop OS from https://syncthing.net/downloads/ and install it.",
+          "Open the Syncthing web UI on your laptop at http://127.0.0.1:8384.",
+          "Click 'Add Remote Device' and paste the Mac Mini's Device ID.",
+          "Give the device a name like 'Mac Mini Server'.",
+          "On the Mac Mini's Syncthing UI, accept the incoming connection request from your laptop.",
+          "On the Mac Mini, edit the 'Second Brain' folder and check the box next to your laptop's device to share it.",
+          "On the laptop, accept the folder share and choose a local path (e.g., ~/second-brain).",
+          "Wait for the initial sync to complete — the status bar will show 'Up to Date'.",
+        ],
+      },
+      {
+        type: "callout",
+        callout: {
+          type: "info",
+          title: "No Inbound Ports Required",
+          body: "Syncthing uses global relay servers and NAT traversal to connect devices even when both are behind NAT routers. Your Google Nest H2D does not need any port forwarding rules for Syncthing to work. The Mac Mini only makes outbound connections.",
+        },
+      },
+    ],
+  },
+  {
+    id: 25,
+    part: 9,
+    title: "Configure OpenClaw to Use Your Second Brain",
+    shortTitle: "Configure Agent",
+    icon: "Bot",
+    estimatedMinutes: 5,
+    content: [
+      {
+        type: "paragraph",
+        text: "With the vault mounted at /vault inside the container, you can now instruct OpenClaw to use your Second Brain as a knowledge base. The simplest way is to add a system prompt instruction that tells the agent about the vault structure.",
+      },
+      {
+        type: "substep",
+        substeps: [
+          "Open the OpenClaw dashboard at http://localhost:3000.",
+          "Navigate to Settings → Agent Behavior → System Prompt.",
+          "Add the following block to your existing system prompt (or create a new one):",
+        ],
+      },
+      {
+        type: "code",
+        codeBlocks: [
+          {
+            label: "System Prompt Addition",
+            language: "text",
+            code: "You have read access to the user's personal knowledge vault at /vault.\nThis is an Obsidian-format Markdown vault. Notes use [[wikilinks]] for internal links.\n\nWhen the user asks you to:\n- Find information: search /vault using grep or read specific .md files\n- Summarize notes: read the relevant files and synthesize\n- Create a new note: write a .md file to /vault/Inbox/ (only if write access is enabled)\n\nAlways cite the source file path when referencing vault content.",
+          },
+        ],
+      },
+      {
+        type: "callout",
+        callout: {
+          type: "info",
+          title: "Enabling Write Access (Optional)",
+          body: "By default the vault is mounted read-only (:ro). To allow OpenClaw to create new notes, remove the :ro flag from the docker-compose.yml bind mount and restart the container. Consider restricting write access to a specific subfolder like /vault/Inbox to limit the agent's reach.",
+        },
+      },
+      {
+        type: "paragraph",
+        text: "You can now ask OpenClaw questions like 'What did I write about project X last month?' or 'Summarize my notes on topic Y' and it will search your vault and respond with context from your own notes.",
+      },
+      {
+        type: "checklist",
+        items: [
+          "~/second-brain folder created on the Mac Mini",
+          "Obsidian vault opened and pointing to ~/second-brain",
+          "Docker bind mount added to docker-compose.yml",
+          "docker exec openclaw ls /vault confirms files are visible",
+          "Syncthing installed and running on both Mac Mini and laptop",
+          "Devices paired and initial sync shows 'Up to Date'",
+          "Obsidian on laptop opens the synced ~/second-brain folder",
+          "System prompt updated to reference /vault",
+        ],
+      },
+      {
+        type: "callout",
+        callout: {
+          type: "success",
+          title: "Second Brain Active!",
+          body: "Your OpenClaw agent can now read your personal knowledge base. Notes you write on your laptop sync to the Mac Mini within seconds via Syncthing, and OpenClaw can immediately reference them. No cloud services, no inbound ports, no firewall changes needed.",
         },
       },
     ],
