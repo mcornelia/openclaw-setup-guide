@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { AlertTriangle, Info, CheckCircle2, Check } from "lucide-react";
+import { AlertTriangle, Info, CheckCircle2, Check, ExternalLink as ExternalLinkIcon } from "lucide-react";
 import CodeBlock from "./CodeBlock";
 import type { StepContent as StepContentData } from "@/lib/guideData";
 
@@ -234,6 +234,42 @@ export default function StepContentRenderer({ content, stepId }: StepContentProp
                     {item.imageCaption}
                   </p>
                 )}
+              </div>
+            ) : null;
+
+          case "links":
+            return item.links && item.links.length > 0 ? (
+              <div key={i} className="my-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <ExternalLinkIcon size={14} className="text-[oklch(0.45_0.12_250)]" />
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[oklch(0.45_0.12_250)] font-['Source_Sans_3',sans-serif]">
+                    {item.linksTitle ?? "Reference Links"}
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {item.links.map((link, li) => (
+                    <a
+                      key={li}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex flex-col gap-1 p-3 rounded-lg border border-[oklch(0.88_0.01_250)] bg-white hover:bg-[oklch(0.97_0.005_250)] hover:border-[oklch(0.55_0.12_250)] transition-all duration-200 shadow-sm hover:shadow-md"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-[oklch(0.18_0.04_250)] text-[oklch(0.88_0.01_250)] font-['Source_Sans_3',sans-serif]">
+                          {link.brand}
+                        </span>
+                        <ExternalLinkIcon size={12} className="text-[oklch(0.64_0.03_250)] group-hover:text-[oklch(0.45_0.12_250)] transition-colors flex-shrink-0" />
+                      </div>
+                      <p className="text-sm font-semibold text-[oklch(0.25_0.04_250)] group-hover:text-[oklch(0.18_0.04_250)] font-['Source_Sans_3',sans-serif] leading-snug">
+                        {link.label}
+                      </p>
+                      <p className="text-xs text-[oklch(0.52_0.03_250)] font-['Source_Sans_3',sans-serif] leading-relaxed">
+                        {link.description}
+                      </p>
+                    </a>
+                  ))}
+                </div>
               </div>
             ) : null;
 

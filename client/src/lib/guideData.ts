@@ -27,8 +27,16 @@ export interface GuideTable {
   rows: TableRow[];
 }
 
+export interface ExternalLink {
+  brand: string;
+  label: string;
+  url: string;
+  description: string;
+  icon?: string;
+}
+
 export interface StepContent {
-  type: "paragraph" | "code" | "callout" | "table" | "checklist" | "substep" | "image";
+  type: "paragraph" | "code" | "callout" | "table" | "checklist" | "substep" | "image" | "links";
   text?: string;
   codeBlocks?: CodeBlock[];  // multiple OS variants
   callout?: Callout;
@@ -38,6 +46,8 @@ export interface StepContent {
   imageUrl?: string;
   imageAlt?: string;
   imageCaption?: string;
+  links?: ExternalLink[];  // external reference links
+  linksTitle?: string;     // optional heading for the links section
 }
 
 export interface Step {
@@ -251,6 +261,36 @@ export const STEPS: Step[] = [
           body: "When you toggle WPA3 on, your network will restart briefly and all connected devices will lose connectivity for a moment. This is completely normal — everything will reconnect automatically within 30 seconds.",
         },
       },
+      {
+        type: "links",
+        linksTitle: "WPA3 Setup Guides for Other Router Brands",
+        links: [
+          {
+            brand: "Asus",
+            label: "Enable WPA3 on Asus Routers",
+            url: "https://www.asus.com/us/support/faq/1042478/",
+            description: "Official Asus FAQ: What is WPA3 and how to enable it on your Asus router via the web GUI or Asus Router App.",
+          },
+          {
+            brand: "TP-Link",
+            label: "WPA3 Support on TP-Link Routers",
+            url: "https://www.tp-link.com/us/wpa3/",
+            description: "TP-Link's official WPA3 overview page listing compatible models and how to change the security mode in the router admin panel.",
+          },
+          {
+            brand: "Netgear",
+            label: "Wireless Security Settings on Netgear Routers",
+            url: "https://kb.netgear.com/24097/How-do-I-set-up-guest-WiFi-on-my-NETGEAR-Nighthawk-router-from-the-router-web-interface",
+            description: "Netgear Knowledge Base: access Advanced > Wireless Settings in the router admin panel to change the security mode to WPA3 or WPA2/WPA3 mixed.",
+          },
+          {
+            brand: "Eero",
+            label: "Eero Network Security Settings",
+            url: "https://support.eero.com/hc/en-us/articles/207937603-How-do-I-set-up-eero",
+            description: "Eero uses WPA3 by default on supported models. Open the eero app → Settings → Network Details to confirm your security mode.",
+          },
+        ],
+      },
     ],
   },
   {
@@ -293,6 +333,36 @@ export const STEPS: Step[] = [
           body: "Ensure 'Allow guests to access devices on my local network' is set to OFF. This is the setting that prevents your server from being able to reach your personal devices. If this is left ON, the isolation provides no meaningful security benefit.",
         },
       },
+      {
+        type: "links",
+        linksTitle: "Guest Network Setup Guides for Other Router Brands",
+        links: [
+          {
+            brand: "Asus",
+            label: "Set Up Guest Network on Asus Routers",
+            url: "https://www.asus.com/us/support/faq/1042732/",
+            description: "Official Asus FAQ: how to create a guest network via the Asus Router App or web GUI. Includes steps to restrict guest access to local devices.",
+          },
+          {
+            brand: "TP-Link",
+            label: "Configure Guest Network on TP-Link Archer Routers",
+            url: "https://www.tp-link.com/us/support/faq/1082/",
+            description: "TP-Link support: go to Advanced > Guest Network in the router admin panel. Enable the guest network and disable 'Allow guests to access my local network'.",
+          },
+          {
+            brand: "Netgear",
+            label: "Set Up Guest WiFi on Netgear Nighthawk Routers",
+            url: "https://kb.netgear.com/24097/How-do-I-set-up-guest-WiFi-on-my-NETGEAR-Nighthawk-router-from-the-router-web-interface",
+            description: "Netgear Knowledge Base: enable guest WiFi via the router web interface at routerlogin.net. Look for the 'Allow guests to see each other and access my local network' option and turn it OFF.",
+          },
+          {
+            brand: "Eero",
+            label: "Share Your Eero Network with Guests",
+            url: "https://support.eero.com/hc/en-us/articles/207895123-How-do-I-share-my-eero-network-with-guests",
+            description: "Eero support: open the eero app → Settings tab → Guest wifi network → toggle Enable guest network ON. Set a separate password for the guest network.",
+          },
+        ],
+      },
     ],
   },
   {
@@ -332,6 +402,36 @@ export const STEPS: Step[] = [
           body: "With WPA3 enabled, a dedicated guest network created, and UPnP disabled, your router is now configured as securely as the H2D allows. These three steps alone significantly reduce your attack surface.",
         },
       },
+      {
+        type: "links",
+        linksTitle: "UPnP Disable Guides for Other Router Brands",
+        links: [
+          {
+            brand: "Asus",
+            label: "Disable UPnP on Asus Routers",
+            url: "https://www.asus.com/support/faq/1039292/",
+            description: "Asus security hardening guide: in the web GUI go to Advanced Settings > WAN > UPnP and set it to Disabled.",
+          },
+          {
+            brand: "TP-Link",
+            label: "Disable UPnP on TP-Link Routers",
+            url: "https://www.tp-link.com/us/support/faq/1082/",
+            description: "In the TP-Link admin panel go to Advanced > NAT Forwarding > UPnP and toggle it off. The exact path may vary by model.",
+          },
+          {
+            brand: "Netgear",
+            label: "Disable UPnP on Netgear Routers",
+            url: "https://kb.netgear.com/24097/How-do-I-set-up-guest-WiFi-on-my-NETGEAR-Nighthawk-router-from-the-router-web-interface",
+            description: "In the Netgear admin panel at routerlogin.net go to Advanced > Advanced Setup > UPnP and uncheck 'Turn UPnP On'.",
+          },
+          {
+            brand: "Eero",
+            label: "UPnP Settings on Eero",
+            url: "https://support.eero.com/hc/en-us/articles/207937603-How-do-I-set-up-eero",
+            description: "In the eero app go to Settings → Network Settings → Advanced Settings → UPnP and toggle it off. Note: UPnP may not be available on all eero models.",
+          },
+        ],
+      },
     ],
   },
   {
@@ -370,6 +470,36 @@ export const STEPS: Step[] = [
           title: "Ethernet Is Even Better",
           body: "If your server computer has an ethernet port and your router is nearby, a wired ethernet connection is more stable and slightly more secure than Wi-Fi. You can still connect it to the guest network segment using a managed switch, but for simplicity, Wi-Fi works fine for most home setups.",
         },
+      },
+      {
+        type: "links",
+        linksTitle: "How to Connect a Device to a Guest Network — Other Brands",
+        links: [
+          {
+            brand: "Asus",
+            label: "Connect to Asus Guest Network",
+            url: "https://www.asus.com/us/support/faq/1042732/",
+            description: "After creating the guest network in the Asus Router App, connect your server device to the guest SSID from its Wi-Fi settings using the guest password you set.",
+          },
+          {
+            brand: "TP-Link",
+            label: "Connect to TP-Link Guest Network",
+            url: "https://www.tp-link.com/us/support/faq/1082/",
+            description: "After enabling the guest network in the TP-Link admin panel, the guest SSID will appear in your device's Wi-Fi list. Connect using the guest password.",
+          },
+          {
+            brand: "Netgear",
+            label: "Connect to Netgear Guest WiFi",
+            url: "https://kb.netgear.com/24097/How-do-I-set-up-guest-WiFi-on-my-NETGEAR-Nighthawk-router-from-the-router-web-interface",
+            description: "Once guest WiFi is enabled in the Netgear admin panel, the guest SSID broadcasts separately from your main network. Select it in your server's Wi-Fi settings.",
+          },
+          {
+            brand: "Eero",
+            label: "Connect to Eero Guest Network",
+            url: "https://support.eero.com/hc/en-us/articles/207895123-How-do-I-share-my-eero-network-with-guests",
+            description: "After enabling the guest network in the eero app, a separate guest SSID becomes available. Connect your server to this SSID using the guest password.",
+          },
+        ],
       },
     ],
   },
