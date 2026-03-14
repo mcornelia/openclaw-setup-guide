@@ -624,7 +624,7 @@ function HeroSection({
             OpenClaw AI Agent<br />+ Second Brain Setup
           </h1>
           <p className="text-[oklch(0.76_0.02_250)] font-['Source_Sans_3',sans-serif] text-base sm:text-lg max-w-xl">
-            Deploy a secure, Docker-containerized AI agent server and a synced Obsidian Second Brain on your home network — designed for the Google Nest H2D.
+            Deploy a secure, Docker-containerized AI agent server and a synced Obsidian Second Brain — all on a single Mac Mini!
           </p>
         </div>
       </div>
