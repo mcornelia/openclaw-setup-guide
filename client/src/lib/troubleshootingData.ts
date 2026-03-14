@@ -7,6 +7,7 @@ export type TroubleshootingCategory =
   | "api"
   | "openclaw"
   | "telegram"
+  | "syncthing"
   | "general";
 
 export type Severity = "critical" | "warning" | "info";
@@ -36,6 +37,7 @@ export const CATEGORY_LABELS: Record<TroubleshootingCategory, string> = {
   api: "API / Keys",
   openclaw: "OpenClaw App",
   telegram: "Telegram",
+  syncthing: "Syncthing",
   general: "General",
 };
 
@@ -45,6 +47,7 @@ export const CATEGORY_COLORS: Record<TroubleshootingCategory, { bg: string; text
   api: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" },
   openclaw: { bg: "bg-slate-50", text: "text-slate-700", border: "border-slate-200" },
   telegram: { bg: "bg-sky-50", text: "text-sky-700", border: "border-sky-200" },
+  syncthing: { bg: "bg-teal-50", text: "text-teal-700", border: "border-teal-200" },
   general: { bg: "bg-gray-50", text: "text-gray-700", border: "border-gray-200" },
 };
 
@@ -833,6 +836,262 @@ cd openclaw`,
       },
     ],
   },
+
+  // ── SYNCTHING ERRORS ───────────────────────────────────────────────────────
+  {
+    id: "syncthing-devices-not-connecting",
+    category: "syncthing",
+    severity: "critical",
+    title: "Syncthing devices not connecting to each other",
+    symptom: "The Mac Mini and laptop both show 'Disconnected' in the Syncthing UI. The device ID was added correctly on both sides but they never reach 'Connected' status.",
+    cause: "Both devices are behind NAT routers and cannot reach each other directly. The global relay discovery may be temporarily unavailable, or a local firewall is blocking Syncthing's outbound connection on port 22067.",
+    fixes: [
+      {
+        label: "Verify Syncthing is running on both devices",
+        os: "macos",
+        code: `# Check if Syncthing is running on macOS
+brew services list | grep syncthing
+
+# If stopped, start it
+brew services start syncthing
+
+# Open the web UI to confirm
+open http://127.0.0.1:8384`,
+      },
+      {
+        label: "Verify Syncthing is running on Linux",
+        os: "linux",
+        code: `systemctl --user status syncthing
+
+# If inactive, start it
+systemctl --user start syncthing`,
+      },
+      {
+        label: "Check that global discovery and relaying are enabled",
+        note: "In the Syncthing web UI on both devices, go to Actions → Settings → Connections. Ensure 'Global Discovery', 'Enable Relaying', and 'NAT Traversal' are all checked.",
+      },
+      {
+        label: "Test outbound connectivity on port 22067",
+        os: "all",
+        code: `# Test that the relay port is reachable outbound
+curl -v telnet://relay.syncthing.net:22067 2>&1 | head -5`,
+      },
+      {
+        label: "Re-add the remote device using the exact Device ID",
+        note: "Copy the Device ID from Actions → Show ID in the Syncthing UI. Even a single character difference will prevent connection. Remove and re-add the device if unsure.",
+      },
+    ],
+    tags: ["syncthing", "disconnected", "NAT", "relay", "devices", "second brain"],
+    relatedStepIds: [24],
+  },
+  {
+    id: "syncthing-sync-conflict",
+    category: "syncthing",
+    severity: "warning",
+    title: "Sync conflict files appearing in the vault",
+    symptom: "Files with names like 'My Note.sync-conflict-20260314-123456-DEVICEID.md' appear in your Obsidian vault. Obsidian shows duplicate notes.",
+    cause: "A conflict occurs when the same file is modified on both devices before Syncthing has a chance to sync the changes. This is common when editing a note on your laptop while OpenClaw (or another process) also modifies the same file on the Mac Mini.",
+    fixes: [
+      {
+        label: "Identify and resolve conflict files",
+        os: "all",
+        code: `# List all conflict files in your vault
+find ~/second-brain -name '*.sync-conflict-*' -type f
+
+# Compare the conflict file with the original
+diff 'My Note.md' 'My Note.sync-conflict-20260314-123456-ABCDEF.md'`,
+      },
+      {
+        label: "Delete conflict files after reviewing them",
+        os: "all",
+        code: `# After reviewing, remove all conflict files
+find ~/second-brain -name '*.sync-conflict-*' -type f -delete
+
+# Verify none remain
+find ~/second-brain -name '*.sync-conflict-*' | wc -l`,
+      },
+      {
+        label: "Prevent conflicts by mounting the vault read-only in Docker",
+        note: "In your docker-compose.yml, ensure the vault bind mount ends with :ro (read-only). This prevents OpenClaw from writing to the vault and eliminates the most common source of conflicts.",
+        code: `# In ~/openclaw/docker-compose.yml:
+# volumes:
+#   - ~/second-brain:/vault:ro   ← :ro prevents OpenClaw writes`,
+      },
+      {
+        label: "Install the Obsidian 'Conflict Resolver' community plugin",
+        note: "In Obsidian, go to Settings → Community Plugins → Browse and search for 'Conflict Resolver'. This plugin highlights conflict files in the file tree and provides a side-by-side merge view.",
+      },
+    ],
+    tags: ["syncthing", "conflict", "duplicate", "obsidian", "vault", "second brain"],
+    relatedStepIds: [23, 24, 25],
+  },
+  {
+    id: "syncthing-not-starting-on-login",
+    category: "syncthing",
+    severity: "warning",
+    title: "Syncthing does not start automatically after Mac Mini restarts",
+    symptom: "After rebooting the Mac Mini, Syncthing is not running. The vault is not syncing until you manually start it. The Syncthing web UI at http://127.0.0.1:8384 is unreachable.",
+    cause: "The Syncthing launch agent (launchd service) is not registered, or it was installed for a different user account. On macOS, Homebrew services must be started per-user.",
+    fixes: [
+      {
+        label: "Register Syncthing as a login service with Homebrew",
+        os: "macos",
+        code: `# Register Syncthing to start at login for your user
+brew services start syncthing
+
+# Verify it is registered
+brew services list | grep syncthing
+# Should show: syncthing  started  youruser ~/Library/LaunchAgents/homebrew.mxcl.syncthing.plist`,
+      },
+      {
+        label: "Manually add a launchd plist if Homebrew services does not work",
+        os: "macos",
+        code: `# Create the LaunchAgents directory if it doesn't exist
+mkdir -p ~/Library/LaunchAgents
+
+# Create the plist file
+cat > ~/Library/LaunchAgents/net.syncthing.syncthing.plist << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>net.syncthing.syncthing</string>
+  <key>ProgramArguments</key>
+  <array><string>/opt/homebrew/bin/syncthing</string><string>serve</string><string>--no-browser</string><string>--no-restart</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict></plist>
+EOF
+
+# Load it immediately
+launchctl load ~/Library/LaunchAgents/net.syncthing.syncthing.plist`,
+      },
+      {
+        label: "Enable systemd service on Linux",
+        os: "linux",
+        code: `systemctl --user enable syncthing
+systemctl --user start syncthing
+
+# Verify it starts on boot
+systemctl --user is-enabled syncthing`,
+      },
+    ],
+    tags: ["syncthing", "autostart", "login", "launchd", "startup", "mac mini"],
+    relatedStepIds: [24],
+  },
+  {
+    id: "syncthing-slow-sync",
+    category: "syncthing",
+    severity: "info",
+    title: "Syncthing sync is very slow or takes hours",
+    symptom: "File changes on the laptop take many minutes or hours to appear on the Mac Mini (or vice versa). The Syncthing UI shows 'Syncing' for a long time with a very slow progress bar.",
+    cause: "Both devices are on different networks (e.g., laptop on main Wi-Fi, Mac Mini on guest network) and cannot reach each other directly. All traffic is being routed through a global relay server, which has limited bandwidth. Alternatively, a large number of small files (common in Obsidian vaults with many attachments) causes high overhead.",
+    fixes: [
+      {
+        label: "Check if devices are using a relay (slow) or direct connection (fast)",
+        note: "In the Syncthing UI, click on the remote device name. If the connection type shows 'Relay', traffic is being routed through a third-party server. If it shows 'Direct', the devices found each other on the local network.",
+      },
+      {
+        label: "Enable local network discovery to allow direct connections",
+        note: "In Syncthing Settings → Connections, ensure 'Local Discovery' is enabled on both devices. When both are on the same physical network (even different subnets), this allows direct connections without a relay.",
+      },
+      {
+        label: "Exclude large attachment folders from sync",
+        os: "all",
+        code: `# Create a .stignore file in your vault to exclude large folders
+cat > ~/second-brain/.stignore << 'EOF'
+# Ignore Obsidian attachment folders with large files
+.obsidian/plugins
+.obsidian/themes
+attachments/*.mp4
+attachments/*.mov
+attachments/*.pdf
+EOF`,
+      },
+      {
+        label: "Check Syncthing bandwidth usage and set limits if needed",
+        note: "In Syncthing Settings → Connections, you can set 'Maximum Send Rate' and 'Maximum Receive Rate' to prevent Syncthing from saturating your network. For a text-only vault, no limits are needed.",
+      },
+    ],
+    tags: ["syncthing", "slow", "relay", "performance", "bandwidth", "obsidian"],
+    relatedStepIds: [24],
+  },
+  {
+    id: "syncthing-vault-not-visible-in-obsidian",
+    category: "syncthing",
+    severity: "warning",
+    title: "Synced vault folder not appearing in Obsidian on laptop",
+    symptom: "Syncthing shows 'Up to Date' on the laptop, but when you open Obsidian the vault is empty or Obsidian does not show the synced notes. The synced folder exists on disk but Obsidian is pointing to a different location.",
+    cause: "Obsidian on the laptop is still pointing to an old vault path, or the Syncthing folder was accepted to a different directory than expected. Obsidian vaults are path-sensitive.",
+    fixes: [
+      {
+        label: "Verify the synced folder path on the laptop",
+        os: "macos",
+        code: `# Check where Syncthing placed the synced folder
+ls ~/second-brain
+
+# You should see your Markdown files here
+# If the folder is empty, check Syncthing UI for sync status`,
+      },
+      {
+        label: "Point Obsidian to the correct synced folder",
+        note: "Open Obsidian → click the vault name in the bottom-left → Manage vaults → Open folder as vault → navigate to ~/second-brain (or wherever Syncthing placed it). Do NOT use 'Create new vault' as that would create an empty vault.",
+      },
+      {
+        label: "Check Syncthing folder path on the laptop",
+        note: "In the Syncthing web UI on the laptop, click on the 'Second Brain' folder and verify the 'Folder Path' matches the directory you expect (e.g., /Users/yourname/second-brain). If it points elsewhere, click Edit and correct the path, then wait for re-sync.",
+      },
+    ],
+    tags: ["syncthing", "obsidian", "vault", "path", "empty", "second brain"],
+    relatedStepIds: [24, 25],
+  },
+  {
+    id: "syncthing-vault-not-mounted-in-docker",
+    category: "syncthing",
+    severity: "critical",
+    title: "OpenClaw cannot see vault files — /vault is empty inside Docker",
+    symptom: "Running 'docker exec openclaw ls /vault' returns an empty directory or 'No such file or directory'. OpenClaw reports it cannot find any notes when asked to search the vault.",
+    cause: "The bind mount in docker-compose.yml is missing, uses the wrong path, or the container was not restarted after the mount was added. Docker bind mounts require an exact absolute path — tilde (~) expansion does not work in all Docker Compose versions.",
+    fixes: [
+      {
+        label: "Verify the bind mount in docker-compose.yml uses an absolute path",
+        os: "macos",
+        code: `# Find your exact home directory path
+echo $HOME
+# e.g. /Users/tmike
+
+# Your docker-compose.yml volumes section should look like:
+# volumes:
+#   - /Users/tmike/.openclaw:/root/.openclaw
+#   - /Users/tmike/second-brain:/vault:ro
+
+# NOT like this (tilde may not expand):
+# volumes:
+#   - ~/second-brain:/vault:ro`,
+      },
+      {
+        label: "Restart the container after editing docker-compose.yml",
+        os: "all",
+        code: `cd ~/openclaw
+docker compose down
+docker compose up -d
+
+# Verify the vault is now visible
+docker exec openclaw ls /vault`,
+      },
+      {
+        label: "Check that the vault directory exists on the host",
+        os: "macos",
+        code: `# Confirm the directory exists and has files
+ls -la ~/second-brain
+
+# If it doesn't exist, create it first
+mkdir -p ~/second-brain`,
+      },
+    ],
+    tags: ["syncthing", "docker", "vault", "bind mount", "openclaw", "second brain"],
+    relatedStepIds: [23, 24, 25],
+  },
+
 ];
 
 export const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as TroubleshootingCategory[];

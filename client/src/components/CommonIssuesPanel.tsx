@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap, ChevronDown, ChevronUp, Copy, Check,
   AlertTriangle, Info, ArrowRight, Box, Wifi, Key,
-  Settings, MessageCircle, HelpCircle,
+  Settings, MessageCircle, HelpCircle, RefreshCw,
 } from "lucide-react";
 import { TOP_ISSUES, CATEGORY_LABELS, CATEGORY_COLORS, type TroubleshootingEntry, type TroubleshootingCategory } from "@/lib/troubleshootingData";
 
@@ -20,6 +20,7 @@ const CATEGORY_ICONS: Record<TroubleshootingCategory, React.ComponentType<{ size
   api: Key,
   openclaw: Settings,
   telegram: MessageCircle,
+  syncthing: RefreshCw,
   general: HelpCircle,
 };
 

@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, X, ChevronDown, ChevronUp, AlertTriangle,
   Info, CheckCircle2, Copy, Check, ExternalLink,
-  Filter, Wrench, Wifi, Box, Key, MessageCircle, Settings, HelpCircle
+  Filter, Wrench, Wifi, Box, Key, MessageCircle, Settings, HelpCircle, RefreshCw
 } from "lucide-react";
 import {
   TROUBLESHOOTING_ENTRIES,
@@ -29,6 +29,7 @@ const CATEGORY_ICONS: Record<TroubleshootingCategory, React.ComponentType<{ size
   api: Key,
   openclaw: Settings,
   telegram: MessageCircle,
+  syncthing: RefreshCw,
   general: HelpCircle,
 };
 
