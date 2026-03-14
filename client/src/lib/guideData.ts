@@ -126,11 +126,11 @@ export const PARTS: Part[] = [
   },
   {
     id: 9,
-    title: "Second Brain: Obsidian + Syncthing",
+    title: "Second Brain: Obsidian + Syncthing / Tailscale",
     shortTitle: "Second Brain",
     icon: "Brain",
-    description: "Set up an Obsidian vault on the same Mac Mini, mount it into OpenClaw via Docker, and sync it to your laptop using Syncthing — all without opening any inbound ports.",
-    steps: [21, 22, 23, 24, 25],
+    description: "Set up an Obsidian vault on the same Mac Mini, mount it into OpenClaw via Docker, and sync it to your laptop using Syncthing or Tailscale — all without opening any inbound ports.",
+    steps: [21, 22, 23, 24, 25, 26],
   },
 ];
 
@@ -1256,6 +1256,195 @@ docker image prune -f`,
           title: "Congratulations — Setup Complete!",
           body: "You have successfully deployed a personal OpenClaw AI Agent server with a practical, layered security setup appropriate for a home environment. Your agent is isolated in Docker, your network provides a guest network barrier, and you have established good security hygiene. Welcome to the world of personal AI agents!",
         },
+      },
+    ],
+  },
+  // ─── STEP 26: Tailscale as Syncthing Alternative ─────────────────────────
+  {
+    id: 26,
+    part: 9,
+    title: "Alternative: Use Tailscale Instead of Syncthing",
+    shortTitle: "Tailscale Option",
+    icon: "Network",
+    estimatedMinutes: 15,
+    content: [
+      {
+        type: "paragraph",
+        text: "Syncthing is the recommended sync method for most users because it is fully self-hosted and requires no account. However, Tailscale is a compelling alternative if you want to access your Mac Mini remotely from any network — not just sync files — or if you prefer a managed, zero-configuration VPN mesh. This step is entirely optional; skip it if Syncthing is already working for you.",
+      },
+      {
+        type: "callout",
+        callout: {
+          type: "info",
+          title: "What is Tailscale?",
+          body: "Tailscale creates a private, encrypted WireGuard-based VPN mesh between all your devices. Once installed, every device gets a stable private IP (e.g., 100.x.x.x) that works across any network — home, office, or cellular. Unlike Syncthing, Tailscale does not sync files itself; it gives your devices a secure tunnel through which you can run any protocol, including Syncthing, SSH, or direct file access.",
+        },
+      },
+      {
+        type: "table",
+        table: {
+          headers: ["Feature", "Syncthing", "Tailscale"],
+          rows: [
+            { cells: ["Primary purpose", "File sync between devices", "Private VPN mesh between devices"] },
+            { cells: ["Requires an account", "No — fully self-hosted", "Yes — free Tailscale account (up to 3 users, 100 devices)"] },
+            { cells: ["File sync capability", "Built-in, real-time", "Not built-in — use with Syncthing or SFTP over Tailscale"] },
+            { cells: ["Remote access (SSH, web UI)", "No", "Yes — access Mac Mini from any network"] },
+            { cells: ["Works across different networks", "Via relay (slower)", "Direct WireGuard tunnel (fast)"] },
+            { cells: ["Setup complexity", "Low — no account needed", "Low — install + login"] },
+            { cells: ["Inbound ports required", "None", "None"] },
+            { cells: ["Privacy", "Fully self-hosted", "Coordination server is Tailscale-hosted (traffic is encrypted)"] },
+            { cells: ["Best for", "Simple vault sync only", "Full remote access + sync across multiple networks"], highlight: true },
+          ],
+        },
+      },
+      {
+        type: "callout",
+        callout: {
+          type: "warning",
+          title: "Recommendation: Use Both Together",
+          body: "The most powerful setup is Tailscale + Syncthing together. Tailscale gives your devices a stable private IP, and Syncthing uses that IP to sync files directly — bypassing public relay servers entirely. This gives you fast, direct sync from any network without opening any ports.",
+        },
+      },
+      {
+        type: "substep",
+        substeps: [
+          "Create a free Tailscale account at tailscale.com — it supports up to 100 devices for personal use",
+          "Install Tailscale on the Mac Mini",
+          "Install Tailscale on your laptop",
+          "Verify both devices appear in the Tailscale admin console",
+          "(Optional) Configure Syncthing to use Tailscale IPs for direct sync",
+        ],
+      },
+      {
+        type: "paragraph",
+        text: "Step 1: Install Tailscale on the Mac Mini. Open a Terminal on the Mac Mini and run the following commands:",
+      },
+      {
+        type: "code",
+        codeBlocks: [
+          {
+            os: "macos",
+            label: "Install Tailscale via Homebrew (Mac Mini)",
+            code: `# Install Tailscale
+brew install tailscale
+
+# Start the Tailscale daemon
+sudo tailscaled &
+
+# Authenticate and join your Tailscale network
+sudo tailscale up
+
+# A browser URL will appear — open it to log in to your Tailscale account
+# After login, the Mac Mini will appear in your Tailscale admin console`,
+          },
+          {
+            os: "linux",
+            label: "Install Tailscale on Linux (Mac Mini running Linux)",
+            code: `# Add the Tailscale repository and install
+curl -fsSL https://tailscale.com/install.sh | sh
+
+# Start and authenticate
+sudo tailscale up
+
+# A browser URL will appear — open it to log in`,
+          },
+        ],
+      },
+      {
+        type: "paragraph",
+        text: "Step 2: Install Tailscale on your laptop. Download the Tailscale app from tailscale.com/download or your OS package manager. Sign in with the same account you used on the Mac Mini.",
+      },
+      {
+        type: "code",
+        codeBlocks: [
+          {
+            os: "macos",
+            label: "Install on laptop (macOS)",
+            code: `# Option A: Download from the Mac App Store (search 'Tailscale')
+# Option B: Install via Homebrew
+brew install tailscale
+sudo tailscaled &
+sudo tailscale up`,
+          },
+          {
+            os: "windows",
+            label: "Install on laptop (Windows)",
+            code: `# Download the Windows installer from:
+# https://tailscale.com/download/windows
+# Run the installer and sign in with your Tailscale account`,
+          },
+          {
+            os: "linux",
+            label: "Install on laptop (Linux)",
+            code: `curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up`,
+          },
+        ],
+      },
+      {
+        type: "paragraph",
+        text: "Step 3: Verify both devices are connected. Go to the Tailscale admin console at login.tailscale.com/admin/machines. You should see both your Mac Mini and laptop listed with green status indicators and stable 100.x.x.x IP addresses.",
+      },
+      {
+        type: "code",
+        codeBlocks: [
+          {
+            label: "Check Tailscale status and find device IPs",
+            code: `# On either device, check Tailscale status
+tailscale status
+
+# Example output:
+# 100.64.0.1   mac-mini  yourname@  macOS   -
+# 100.64.0.2   laptop    yourname@  macOS   -
+
+# Ping the Mac Mini from your laptop to confirm connectivity
+ping 100.64.0.1`,
+          },
+        ],
+      },
+      {
+        type: "paragraph",
+        text: "Step 4 (Optional): Configure Syncthing to sync over Tailscale for faster, direct connections. By default, Syncthing may route through public relay servers when devices are on different networks. With Tailscale installed, you can force Syncthing to use the direct Tailscale IP instead.",
+      },
+      {
+        type: "code",
+        codeBlocks: [
+          {
+            label: "Set Syncthing to use Tailscale IP for direct sync",
+            code: `# 1. Find the Mac Mini's Tailscale IP
+tailscale ip -4
+# e.g., 100.64.0.1
+
+# 2. In the Syncthing web UI on your LAPTOP (http://127.0.0.1:8384):
+#    Click on the Mac Mini device → Edit
+#    In 'Addresses', replace 'dynamic' with:
+#    tcp://100.64.0.1:22000
+#    This forces Syncthing to connect via Tailscale directly
+
+# 3. Verify the connection type changed to 'Direct'
+#    Click the device in Syncthing UI — should show:
+#    Connection: Direct (TCP)`,
+          },
+        ],
+      },
+      {
+        type: "callout",
+        callout: {
+          type: "success",
+          title: "Tailscale + Syncthing: Best of Both Worlds",
+          body: "With this setup, Syncthing routes all vault sync traffic through the encrypted Tailscale tunnel using a direct WireGuard connection — no relay servers, no open ports, and no dependency on Tailscale's coordination server for the actual data transfer. Your vault data never leaves your devices unencrypted.",
+        },
+      },
+      {
+        type: "checklist",
+        items: [
+          "Tailscale installed and running on Mac Mini",
+          "Tailscale installed and running on laptop",
+          "Both devices visible in Tailscale admin console with 100.x.x.x IPs",
+          "Ping test between devices succeeds over Tailscale",
+          "(Optional) Syncthing configured to use Tailscale IP for direct sync",
+          "Syncthing shows 'Direct' connection type instead of 'Relay'",
+        ],
       },
     ],
   },

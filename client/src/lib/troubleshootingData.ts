@@ -1092,6 +1092,160 @@ mkdir -p ~/second-brain`,
     relatedStepIds: [23, 24, 25],
   },
 
+  // ── TAILSCALE ERRORS ────────────────────────────────────────────────────
+  {
+    id: "tailscale-devices-not-appearing",
+    category: "syncthing",
+    severity: "critical",
+    title: "Mac Mini not appearing in Tailscale admin console after install",
+    symptom: "After running 'sudo tailscale up', the Mac Mini does not appear in the Tailscale admin console at login.tailscale.com/admin/machines. The command printed a URL but the device never shows as connected.",
+    cause: "The authentication URL was not opened, the Tailscale daemon (tailscaled) is not running, or the device was already registered under a different account. On macOS, the system extension may need approval.",
+    fixes: [
+      {
+        label: "Ensure tailscaled daemon is running before authenticating",
+        os: "macos",
+        code: `# Check if tailscaled is running
+pgrep tailscaled || echo "Not running"
+
+# Start it if not running
+sudo tailscaled &
+
+# Wait 2 seconds, then authenticate
+sleep 2 && sudo tailscale up`,
+      },
+      {
+        label: "Approve the system extension on macOS",
+        note: "On macOS, Tailscale requires a system extension approval. Go to System Settings → Privacy & Security → scroll to the bottom → click 'Allow' next to the Tailscale extension message. Then run 'sudo tailscale up' again.",
+      },
+      {
+        label: "Re-run tailscale up and open the URL immediately",
+        os: "macos",
+        code: `sudo tailscale up
+# Copy the https://login.tailscale.com/... URL that appears
+# Open it in a browser and sign in within 5 minutes
+# The device should appear in the admin console within 30 seconds`,
+      },
+      {
+        label: "Check Tailscale status after authentication",
+        os: "macos",
+        code: `tailscale status
+# Should show your device with a 100.x.x.x IP address
+# If it shows 'Stopped', run: sudo tailscale up`,
+      },
+    ],
+    tags: ["tailscale", "not connecting", "admin console", "authentication", "second brain"],
+    relatedStepIds: [26],
+  },
+  {
+    id: "tailscale-ping-fails",
+    category: "syncthing",
+    severity: "warning",
+    title: "Cannot ping Mac Mini over Tailscale from laptop",
+    symptom: "Both devices appear in the Tailscale admin console with 100.x.x.x IPs, but 'ping 100.x.x.x' from the laptop times out or returns 'Request timeout'. SSH and Syncthing also fail to connect.",
+    cause: "A local firewall on the Mac Mini is blocking incoming Tailscale traffic, or the Tailscale subnet routes are not configured correctly. On macOS, the built-in firewall may block ICMP (ping) packets.",
+    fixes: [
+      {
+        label: "Check macOS firewall settings on the Mac Mini",
+        note: "Go to System Settings → Network → Firewall. If the firewall is enabled, click 'Options' and ensure Tailscale is in the allowed applications list, or temporarily disable the firewall to test.",
+      },
+      {
+        label: "Use tailscale ping instead of regular ping",
+        os: "macos",
+        code: `# Tailscale's own ping bypasses OS firewall rules
+tailscale ping 100.x.x.x
+
+# If this succeeds but regular ping fails, the OS firewall
+# is blocking ICMP. Add a firewall exception for Tailscale.`,
+      },
+      {
+        label: "Verify both devices are on the same Tailscale account",
+        note: "In the Tailscale admin console, confirm both the Mac Mini and laptop appear under the same account. Devices on different accounts cannot communicate unless you set up Tailscale ACLs.",
+      },
+      {
+        label: "Re-authenticate if the session has expired",
+        os: "macos",
+        code: `# Check if Tailscale session is still valid
+tailscale status
+
+# If it shows 'Needs reauthentication', run:
+sudo tailscale up --reset`,
+      },
+    ],
+    tags: ["tailscale", "ping", "firewall", "connectivity", "second brain"],
+    relatedStepIds: [26],
+  },
+  {
+    id: "tailscale-not-starting-on-boot",
+    category: "syncthing",
+    severity: "warning",
+    title: "Tailscale does not reconnect after Mac Mini restarts",
+    symptom: "After rebooting the Mac Mini, Tailscale is not running. The device disappears from the Tailscale admin console and the laptop cannot reach it until Tailscale is manually started.",
+    cause: "The Tailscale daemon (tailscaled) is not configured to start at login. On macOS, Homebrew installs Tailscale as a formula but does not register it as a login service automatically.",
+    fixes: [
+      {
+        label: "Download the official Tailscale macOS app for automatic startup",
+        note: "The easiest fix is to use the official Tailscale app from the Mac App Store instead of the Homebrew formula. The App Store version registers itself as a login item automatically and shows in the menu bar.",
+      },
+      {
+        label: "Register tailscaled as a launchd service (Homebrew install)",
+        os: "macos",
+        code: `# Create a launchd plist for tailscaled
+sudo tee /Library/LaunchDaemons/com.tailscale.tailscaled.plist << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.tailscale.tailscaled</string>
+  <key>ProgramArguments</key>
+  <array><string>/opt/homebrew/bin/tailscaled</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict></plist>
+EOF
+
+# Load it
+sudo launchctl load /Library/LaunchDaemons/com.tailscale.tailscaled.plist`,
+      },
+      {
+        label: "Enable systemd service on Linux",
+        os: "linux",
+        code: `sudo systemctl enable tailscaled
+sudo systemctl start tailscaled
+
+# Verify it starts on boot
+sudo systemctl is-enabled tailscaled`,
+      },
+    ],
+    tags: ["tailscale", "autostart", "boot", "launchd", "mac mini", "second brain"],
+    relatedStepIds: [26],
+  },
+  {
+    id: "tailscale-syncthing-still-using-relay",
+    category: "syncthing",
+    severity: "info",
+    title: "Syncthing still shows 'Relay' connection even after Tailscale is installed",
+    symptom: "Tailscale is working (devices can ping each other), but in the Syncthing UI the remote device still shows 'Relay' as the connection type instead of 'Direct'. Sync is slower than expected.",
+    cause: "Syncthing is still using its default 'dynamic' address discovery, which may prefer a public relay over the Tailscale tunnel. You need to explicitly tell Syncthing to use the Tailscale IP address.",
+    fixes: [
+      {
+        label: "Find the Mac Mini's Tailscale IP",
+        os: "macos",
+        code: `# Run on the Mac Mini
+tailscale ip -4
+# e.g., 100.64.0.1`,
+      },
+      {
+        label: "Set the Syncthing device address to the Tailscale IP",
+        note: "In the Syncthing web UI on your LAPTOP (http://127.0.0.1:8384): click on the Mac Mini device → Edit → change the 'Addresses' field from 'dynamic' to 'tcp://100.64.0.1:22000' (replace with your actual Tailscale IP). Click Save and wait 30 seconds for reconnection.",
+      },
+      {
+        label: "Verify the connection type changed to Direct",
+        note: "After saving, click on the Mac Mini device in the Syncthing UI. The 'Connection' field should now show 'Direct (TCP)' instead of 'Relay'. If it still shows Relay, check that Tailscale is running on both devices and they can ping each other.",
+      },
+    ],
+    tags: ["tailscale", "syncthing", "relay", "direct connection", "performance", "second brain"],
+    relatedStepIds: [24, 26],
+  },
+
 ];
 
 export const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as TroubleshootingCategory[];
