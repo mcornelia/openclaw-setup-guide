@@ -184,7 +184,7 @@ export default function Home() {
                 <Shield size={14} className="text-white" />
               </div>
               <span className="font-['Fraunces',serif] font-700 text-foreground text-sm hidden sm:block">
-                OpenClaw Setup Guide
+                OpenClaw + Second Brain Setup
               </span>
             </button>
           </div>
@@ -618,13 +618,13 @@ function HeroSection({
         <div className="absolute inset-0 bg-gradient-to-t from-[oklch(0.18_0.04_250)] via-[oklch(0.18_0.04_250)/60%] to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 px-6 sm:px-12 pb-8">
           <p className="text-[oklch(0.60_0.16_162)] text-sm font-semibold uppercase tracking-widest font-['Source_Sans_3',sans-serif] mb-2">
-            Step-by-Step Guide
+            Step-by-Step Setup Guide
           </p>
           <h1 className="text-white font-['Fraunces',serif] font-900 text-3xl sm:text-5xl leading-tight mb-3">
-            OpenClaw AI Agent<br />Home Server Setup
+            OpenClaw AI Agent<br />+ Second Brain Setup
           </h1>
           <p className="text-[oklch(0.76_0.02_250)] font-['Source_Sans_3',sans-serif] text-base sm:text-lg max-w-xl">
-            Deploy a secure, Docker-containerized personal AI agent on your home network — designed for the Google Nest H2D.
+            Deploy a secure, Docker-containerized AI agent server and a synced Obsidian Second Brain on your home network — designed for the Google Nest H2D.
           </p>
         </div>
       </div>
