@@ -1,0 +1,5 @@
+# robots.txt for OpenClaw Setup Guide
+User-agent: *
+Allow: /
+
+Sitemap: https://mcornelia.github.io/openclaw-setup-guide/sitemap.xml
